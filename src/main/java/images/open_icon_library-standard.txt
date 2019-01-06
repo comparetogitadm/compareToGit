@@ -1,0 +1,4 @@
+open_icon_library-standard:
+  cart-go.png
+  dialog-warning-3.png
+  process-stop-3.png
