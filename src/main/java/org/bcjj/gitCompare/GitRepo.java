@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.internal.storage.file.FileRepository;
@@ -11,6 +12,7 @@ import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.MutableObjectId;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.lib.ObjectLoader;
+import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
@@ -37,27 +39,41 @@ public class GitRepo {
 	
 	public GitRepo(String path,String fromPartialCommitId) throws Exception {
 		this.path=path;
-		this.fromPartialCommitId=fromPartialCommitId;
+		
 		fileRepository=new FileRepository(path + "/.git");
 		git=new Git(fileRepository);
 		lastCommitId = fileRepository.resolve(Constants.HEAD);
+		if (lastCommitId==null) {
+			throw new Exception(path+" no es un repositorio git. No se resuelve HEAD");
+		}
 		branchName=fileRepository.getBranch();
 		//fromId=new MutableObjectId();
 		//desde.fromString("31978578756cafa678eb7c86b1e96a4e9753440e");
 		//fromId.fromString(fromCommitId);//sha1 40
-		
-		fromId = fileRepository.resolve(fromPartialCommitId);
-		
+		if (fromPartialCommitId==null || fromPartialCommitId.trim().equals("")) {
+			fromId=lastCommitId;
+			this.fromPartialCommitId=fromId.getName();
+		} else {
+			this.fromPartialCommitId=fromPartialCommitId;
+			fromId = fileRepository.resolve(fromPartialCommitId);
+		}
 		
         try (RevWalk walk = new RevWalk(fileRepository)) {
             RevCommit commit = walk.parseCommit(fromId);
             String autor=commit.getAuthorIdent().getName();
             long milisecs=1000*commit.getCommitTime();// commit time, expressed as seconds since the epoch
+            
+            PersonIdent authorIdent = commit.getAuthorIdent();
+            Date authorDate = authorIdent.getWhen();
+            TimeZone authorTimeZone = authorIdent.getTimeZone();
+            
+            
+            
     		fromCommitAuthorEmail=commit.getAuthorIdent().getEmailAddress();
     		fromCommitAuthorName=commit.getAuthorIdent().getName();
     		fromCommitFullMessage=commit.getFullMessage();
     		fromCommitShortMessage=commit.getShortMessage();
-    		fromCommitMilisecs=milisecs;
+    		fromCommitMilisecs=authorDate.getTime();
     		
             walk.dispose();
         } 

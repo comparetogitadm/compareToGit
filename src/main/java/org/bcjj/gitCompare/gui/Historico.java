@@ -239,7 +239,7 @@ public class Historico extends JPanel {
 			});
 			btnCompFile.setMargin(new Insets(1, 1, 2, 1));
 			btnCompFile.setFont(new Font("Tahoma", Font.PLAIN, 11));
-			btnCompFile.setToolTipText("compara la version en git con el Fichero");
+			btnCompFile.setToolTipText("compara  el Fichero  con  la Version en Git");
 		}
 		return btnCompFile;
 	}
@@ -259,7 +259,7 @@ public class Historico extends JPanel {
 			});
 			btnCompFileGitDir.setMargin(new Insets(1, 1, 2, 1));
 			btnCompFileGitDir.setFont(new Font("Tahoma", Font.PLAIN, 11));
-			btnCompFileGitDir.setToolTipText("compara la version en git con fichero en directorio git");
+			btnCompFileGitDir.setToolTipText("compara  la Version en Git  con  el Fichero en Directorio Git");
 		}
 		return btnCompFileGitDir;
 	}

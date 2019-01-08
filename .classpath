@@ -13,7 +13,7 @@
 	<classpathentry kind="lib" path="lib/junit-3.8.1.jar"/>
 	<classpathentry kind="lib" path="lib/junrar-1.0.1.jar"/>
 	<classpathentry kind="lib" path="lib/jzlib-1.1.1.jar"/>
-	<classpathentry kind="lib" path="lib/org.eclipse.jgit-5.2.0.201812061821-r.jar"/>
+	<classpathentry kind="lib" path="lib/org.eclipse.jgit-5.2.0.201812061821-r.jar" sourcepath="lib/org.eclipse.jgit-4.8.0.201706111038-r-sources.jar"/>
 	<classpathentry kind="lib" path="lib/slf4j-api-1.7.2.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
