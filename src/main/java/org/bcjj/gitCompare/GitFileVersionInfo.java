@@ -101,6 +101,12 @@ public class GitFileVersionInfo {
 			FileWriter fw=new FileWriter(tempFile);
 			fw.write("error obteniendo fichero "+fileVsGit.getGitFile()+" idCommit:"+commitId+"  Posiblemente borrado");
 			fw.close();
+		} finally {
+			try {
+				fos.close();
+			} catch (Exception r) {
+				//ignorar
+			}
 		}
 	}
 	

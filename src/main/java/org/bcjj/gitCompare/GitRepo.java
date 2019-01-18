@@ -6,6 +6,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
 
+import org.apache.commons.lang3.StringUtils;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.internal.storage.file.FileRepository;
 import org.eclipse.jgit.lib.Constants;
@@ -37,11 +38,23 @@ public class GitRepo {
 	private String fromCommitAuthorEmail;
 	private File tempDir;
 	
+	
+	public static void main(String [] s) throws Exception {
+		GitRepo gitRepo=new GitRepo("D:/proyectos/huntfilesTest/git","33868");
+		System.out.println("fromId:"+gitRepo.fromId);
+	}
+	
 	public GitRepo(String path,String fromPartialCommitId) throws Exception {
+		path=StringUtils.replace(path, "\\", "/");
+		path=StringUtils.replace(path,"//", "/");
+		while (path.endsWith("/")) {
+			path=path.substring(0,path.length()-1);
+		}
 		this.path=path;
 		
 		fileRepository=new FileRepository(path + "/.git");
 		git=new Git(fileRepository);
+		
 		lastCommitId = fileRepository.resolve(Constants.HEAD);
 		if (lastCommitId==null) {
 			throw new Exception(path+" no es un repositorio git. No se resuelve HEAD");
@@ -54,6 +67,7 @@ public class GitRepo {
 			fromId=lastCommitId;
 			this.fromPartialCommitId=fromId.getName();
 		} else {
+			fromPartialCommitId=fromPartialCommitId.trim();
 			this.fromPartialCommitId=fromPartialCommitId;
 			fromId = fileRepository.resolve(fromPartialCommitId);
 		}

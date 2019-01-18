@@ -36,6 +36,8 @@ import java.util.List;
 import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.swing.BoxLayout;
 import javax.swing.ComboBoxModel;
@@ -71,11 +73,13 @@ import org.bcjj.gitCompare.FileVsGit;
 import org.bcjj.gitCompare.GitFileVersionInfo;
 import org.bcjj.gitCompare.GitRepo;
 import org.bcjj.gitCompare.gui.ComboUtil.ComboName;
+import org.bcjj.gitCompare.gui.MapeoDlg.MapeoInfo;
 
 import net.iharder.dnd.FileDrop;
 import java.awt.Font;
 import javax.swing.JComboBox;
 import javax.swing.JCheckBox;
+import java.awt.Toolkit;
 
 // obtener el commit de una fecha     git rev-list -1 --before="$DATE" master
 /*
@@ -196,7 +200,12 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	private JButton btnSave;
 	private String compareCommand;
 	
-	private List<String> reglasMapeo;
+	private List<String> confMapeoReglasMapeo;
+	private String confMapeoFicheroParaFecha;
+	private String confMapeoFicheroParaCommitId;
+	private String confMapeoCommitIdExpresion;
+	private int confMapeoCommitIdExpresionGroup;
+	
 	private JPanel panel_8;
 	private JTextField commitInfo;
 	private JPanel panelBrachName;
@@ -239,6 +248,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	private JPanel panelGitOptionBranch;
 	private JLabel lblOptionBranch;
 	private JTextField textOptionBranch;
+	private JLabel lblNewLabel_1;
 
 	
 	/**
@@ -309,6 +319,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	 */
 	private void initialize() {
 		frmGitcompare = new JFrame();
+		frmGitcompare.setIconImage(Toolkit.getDefaultToolkit().getImage(GitCompareMainWindow.class.getResource("/images/arrow-divide2.png")));
 		frmGitcompare.setTitle("GitCompare");
 		frmGitcompare.setBounds(100, 100, 920, 572);
 		frmGitcompare.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -399,7 +410,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 		}
 		Properties p=new Properties();
 		InputStream r=null;
-		reglasMapeo=new ArrayList<String>();
+		confMapeoReglasMapeo=new ArrayList<String>();
 		try {
 			r=new FileInputStream(filenameValue);
 			p.load(r);
@@ -407,11 +418,20 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 			getTextOptionBranch().setText(branchName);
 			getTxtFilesDir().setText(p.getProperty("filesDir"));
 			getTxtGitdirectory().setText(p.getProperty("gitDir"));
-			refreshBranch();
+			getTxtUserName().setText(p.getProperty("userName"));
+			confMapeoFicheroParaFecha=p.getProperty("ficheroParaFecha","");
+			confMapeoFicheroParaCommitId=p.getProperty("ficheroParaCommitId","");
+			confMapeoCommitIdExpresion=p.getProperty("commitIdExpresion","");
+			try {
+				confMapeoCommitIdExpresionGroup=Integer.parseInt(p.getProperty("commitIdExpresionGroup","0"));
+			} catch (Exception ee) {
+				confMapeoCommitIdExpresionGroup=0;
+			}
+			refreshMapeoData();
 			for (int i=0;i<1000;i++) {
 				String x=p.getProperty("path."+i);
 				if (x!=null) {
-					reglasMapeo.add(x);
+					confMapeoReglasMapeo.add(x);
 				}
 			}
 		} catch (Exception e) {
@@ -429,14 +449,88 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	}
 	
 
+	private void refreshMapeoData() {
+		boolean ponerFecha=false;
+		boolean puestaFecha=false;
+		boolean ponerCommitId=false;
+		boolean puestoCommitId=false;
+		try {
+			if (confMapeoFicheroParaFecha!=null && !confMapeoFicheroParaFecha.trim().equals("")) {
+				ponerFecha=true;
+				File fFecha=new File(confMapeoFicheroParaFecha);
+				if (fFecha.exists() && fFecha.isFile()) {
+					Date d=new Date(fFecha.lastModified());
+					SimpleDateFormat sdf=new SimpleDateFormat("yyyy/MM/dd HH:mm");
+					String fec=sdf.format(d);
+					getCmbFechaDesde().setSelectedItem(fec);
+					puestaFecha=true;
+				}
+			}
+		} catch (Exception r) {
+			System.out.println("error al refrescar los datos de mapeo para el fichero para fecha "+r);
+		}
+		try {
+			if (confMapeoFicheroParaCommitId!=null && !confMapeoFicheroParaCommitId.trim().equals("")) {
+				ponerCommitId=true;
+				File fCommit=new File(confMapeoFicheroParaCommitId);
+				if (fCommit.exists() && fCommit.isFile()) {
+					String commitId=getCommitIdFromFile(fCommit);
+					if (commitId!=null) {
+						getTxtCommitId().setText(commitId);
+						puestoCommitId=true;
+					}
+				}
+			}
+		} catch (Exception r) {
+			System.out.println("error al refrescar los datos de mapeo para el obterner el commitId "+r);
+		}
+		String falta="";
+		if (ponerFecha && !puestaFecha) {
+			falta=falta+ "No se ha establecido la fecha desde.";
+		}
+		if (ponerCommitId && !puestoCommitId) {
+			falta=falta+"No se ha puesto el commitId";
+		}
+		if (!falta.trim().equals("")) {
+			showMessage(falta);
+		}
+		refreshBranch();
+	}
+
+	private String getCommitIdFromFile(File fCommit) throws IOException {
+		String leido = FileUtils.readFileToString(fCommit);
+		String[] lineas = leido.split("\r\n");
+		Pattern pattern = Pattern.compile(confMapeoCommitIdExpresion);
+		for (String txt:lineas) {
+			try {
+		        Matcher matcher = pattern.matcher(txt);
+				if (matcher.find()) {
+					String encontrado=matcher.group(confMapeoCommitIdExpresionGroup);
+					return encontrado;
+				}							
+			} catch (Exception r) {
+				//ignorar
+			}
+		}
+		return null;
+	}
+
 	protected void saveMaps() throws IOException {
 		String filenameValue=getProjectFile();
 		Properties p=new Properties();
 		p.setProperty("branchName", getTextOptionBranch().getText());
 		p.setProperty("filesDir", getTxtFilesDir().getText());
 		p.setProperty("gitDir", getTxtGitdirectory().getText());
+		
+		p.setProperty("ficheroParaFecha", confMapeoFicheroParaFecha);
+		p.setProperty("ficheroParaCommitId", confMapeoFicheroParaCommitId);
+		p.setProperty("commitIdExpresion", confMapeoCommitIdExpresion);
+		p.setProperty("commitIdExpresionGroup", ""+confMapeoCommitIdExpresionGroup);
+		
+		p.setProperty("userName", getTxtUserName().getText());
+		
 		int i=0;
-		for (String r:reglasMapeo) {
+		for (String r:confMapeoReglasMapeo) {
 			p.setProperty("path."+i, r);
 			i++;
 		}
@@ -585,6 +679,13 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 				String fileAbsMapeado=mapearReglas(fileAbs);  //  src/web/web-prod/srv/main.jsp
 				if (fileAbsMapeado!="!") {
 					String tempF=tempDirectoy+fileAbsMapeado;
+					File f=new File(tempF);
+					String soloNombre=f.getName();
+					String ext="";
+					if (soloNombre.lastIndexOf(".")>0) {
+						ext=soloNombre.substring(soloNombre.lastIndexOf(".")); //incluye el punto
+					}
+					
 					FileVsGit fileVsGit=new FileVsGit(fich,gitRepo,fileAbsMapeado,borrar,tempF);
 					if (fileAbsMapeado.contains("codigo.java")) {
 						System.out.println(fileAbsMapeado);
@@ -601,10 +702,12 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 					for (GitFileVersionInfo version:versionesRev) {
 						i++;
 						String numVer = String.format("%03d", i);
+						
 						String tempFile=tempDirectoy+fileAbsMapeado+"--"+numVer+"--"+version.getCommitId().substring(0, 6)+"--"+version.getFechaComprimidaYMDHMS();
 						if (version.isBase()) {
 							tempFile=tempFile+"-base";
 						}
+						tempFile=tempFile+ext;
 						version.setTempFile(new File(tempFile));
 					}
 					
@@ -667,10 +770,10 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	
 	private String mapearReglas(String fileAbs) { //como baseDirAbsolute termina forzosamente por /, fileAbs no comenzará por /
 		fileAbs=StringUtils.replace(fileAbs, "\\", "/");
-		if (reglasMapeo==null) {
+		if (confMapeoReglasMapeo==null) {
 			return fileAbs;
 		}
-		for (String s:reglasMapeo) {
+		for (String s:confMapeoReglasMapeo) {
 			StringTokenizer st=new StringTokenizer(s,"|");
 			String buscar=trimPathSymbol(st.nextToken())+"/";
 			String mapear=trimPathSymbol(st.nextToken())+"/";
@@ -1348,7 +1451,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	
 	protected String getReglasMapeoAsString() {
 		StringBuilder strReglasMapeo=new StringBuilder();
-		for (String r:reglasMapeo) {
+		for (String r:confMapeoReglasMapeo) {
 			strReglasMapeo.append(r).append("\r\n");
 		}
 		return strReglasMapeo.toString();
@@ -1380,19 +1483,24 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	}
 
 	protected void openMaps(String reglas) {
-		MapeoDlg mapeoDlg=new MapeoDlg(null,reglas);
+		MapeoDlg mapeoDlg=new MapeoDlg(null,reglas,confMapeoFicheroParaFecha,confMapeoFicheroParaCommitId,confMapeoCommitIdExpresion,confMapeoCommitIdExpresionGroup);
 		boolean aceptado=mapeoDlg.showDialog();
 		String respuestaReglas="";
 		if (aceptado) {
-			respuestaReglas=mapeoDlg.getReglasMapeo();
-			respuestaReglas=StringUtils.replace(respuestaReglas, "\\", "/");
 			try {
-				reglasMapeo=listReglasMapeo(respuestaReglas);
+				MapeoInfo mapeoInfo=mapeoDlg.getReglasMapeo();
+				confMapeoFicheroParaFecha=mapeoInfo.ficheroParaFecha;
+				confMapeoFicheroParaCommitId=mapeoInfo.ficheroParaCommitId;
+				confMapeoCommitIdExpresion=mapeoInfo.commitIdExpresion;
+				confMapeoCommitIdExpresionGroup=mapeoInfo.commitIdExpresionGroup;
+				respuestaReglas=mapeoInfo.reglasMapeo;
+				respuestaReglas=StringUtils.replace(respuestaReglas, "\\", "/");
+				confMapeoReglasMapeo=listReglasMapeo(respuestaReglas);
 			} catch (Exception r) {
 				showMessage(""+r);
 				openMaps(respuestaReglas);
-				
 			}
+			refreshMapeoData();
 		}
 	}
 	
@@ -1658,8 +1766,9 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 			panelAccionesSeleccion.setLayout(new FlowLayout(FlowLayout.LEADING, 2, 0));
 			panelAccionesSeleccion.add(getBtnCompareVsGit());
 			panelAccionesSeleccion.add(getBtnComparebase());
-			panelAccionesSeleccion.add(getBtnCopy());
 			panelAccionesSeleccion.add(getBtnCompG());
+			panelAccionesSeleccion.add(getLblNewLabel_1());
+			panelAccionesSeleccion.add(getBtnCopy());
 		}
 		return panelAccionesSeleccion;
 	}
@@ -2143,5 +2252,11 @@ Opens a Text Merge view with the specified files in the left, right, center, and
 			textOptionBranch.setColumns(10);
 		}
 		return textOptionBranch;
+	}
+	private JLabel getLblNewLabel_1() {
+		if (lblNewLabel_1 == null) {
+			lblNewLabel_1 = new JLabel("-");
+		}
+		return lblNewLabel_1;
 	}
 }
