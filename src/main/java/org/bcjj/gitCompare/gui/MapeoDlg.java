@@ -222,11 +222,11 @@ public class MapeoDlg extends JDialog implements ActionListener {
 			btnGensample = new JButton("genSample");
 			btnGensample.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
-					getTextReglasMapeo().setText("deployment\\srv-war\\WEB-INF\\java|src\\java"+NL
-							+"deployment\\srv-war\\WEB-INF\\resources|src\\web\\web-prod\\conf"+NL
-							+"deployment\\srv-war|src\\web\\web-prod\\srv"+NL
-							+"deployment/srv-war/WEB-INF/classes|!"+NL
-							+"deployment/srv-war/WEB-INF/lib|!");
+					getTextReglasMapeo().setText("srv-war\\WEB-INF\\java|src\\java"+NL
+							+"srv-war\\WEB-INF\\config|src\\web\\web-prod\\properties"+NL
+							+"srv-war/WEB-INF/classes|!"+NL
+							+"srv-war/WEB-INF/lib|!"+NL
+							+"srv-war|src\\web\\web-prod\\srv"+NL);
 				}
 			});
 		}

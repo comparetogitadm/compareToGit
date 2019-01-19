@@ -13,3 +13,7 @@ A tool to help with the synchronization of a directory against a git repository 
 It is possible to filter only the files that have changed in the directory from a date.
 
 
+
+screenshots:
+
+![Screenshot comp2git](sample-comp2git.png)
