@@ -4,7 +4,8 @@ public class FileInTreeInfo {
 
 	String pathName;
 	EstadoProcesado estadoProcesado=EstadoProcesado.SinRevisar;
-	Diferencia diferencia=null;
+	NuevasVersionesInfo nuevasVersionesInfo=null;
+
 	
 	public FileInTreeInfo(String pathName) {
 		this.pathName=pathName;
@@ -22,11 +23,12 @@ public class FileInTreeInfo {
 	public void setEstadoProcesado(EstadoProcesado estadoProcesado) {
 		this.estadoProcesado = estadoProcesado;
 	}
-	public Diferencia getDiferencia() {
-		return diferencia;
+	public NuevasVersionesInfo getNuevasVersionesInfo() {
+		return nuevasVersionesInfo;
 	}
-	public void setDiferencia(Diferencia diferencia) {
-		this.diferencia = diferencia;
+	public void setNuevasVersionesInfo(NuevasVersionesInfo diferencia) {
+		this.nuevasVersionesInfo = diferencia;
 	}
+
 	
 }

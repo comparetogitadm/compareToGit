@@ -7,8 +7,10 @@ import java.awt.Dialog.ModalityType;
 
 import javax.swing.JButton;
 import javax.swing.JDialog;
+import javax.swing.JFormattedTextField;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
+import javax.swing.text.MaskFormatter;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextPane;
@@ -16,6 +18,7 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 
 import java.awt.event.ActionListener;
+import java.text.ParseException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.awt.event.ActionEvent;
@@ -52,6 +55,9 @@ public class MapeoDlg extends JDialog implements ActionListener {
 	private JTextField textCommitIdRegExp;
 	private JTextField textGroupNumber;
 	private JButton btnNewButton;
+	private JPanel panelOpcionesFecha;
+	private JLabel lblAddMinutes;
+	private JTextField textMinutesAddDate;
 	
 	public static class MapeoInfo {
 		String reglasMapeo;
@@ -59,6 +65,7 @@ public class MapeoDlg extends JDialog implements ActionListener {
 		String ficheroParaCommitId;
 		String commitIdExpresion;
 		int commitIdExpresionGroup;
+		public int minutesAddDate;
 	}
 	
 	/**
@@ -78,7 +85,7 @@ public class MapeoDlg extends JDialog implements ActionListener {
 				System.out.println("grupo2: ["+matcher.group(4)+"]");
 			}
 			
-			MapeoDlg dialog = new MapeoDlg(null,"x","fich4date","info",txt,4);
+			MapeoDlg dialog = new MapeoDlg(null,"x","fich4date","info",txt,4,5);
 			dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
 			dialog.setVisible(true);
 		} catch (Exception e) {
@@ -89,7 +96,7 @@ public class MapeoDlg extends JDialog implements ActionListener {
 	/**
 	 * Create the dialog.
 	 */
-	public MapeoDlg(Window owner,String reglasMapeo,String ficheroParaFecha,String ficheroParaCommitId, String expresionCommitId, int groupCommitId ) {
+	public MapeoDlg(Window owner,String reglasMapeo,String ficheroParaFecha,String ficheroParaCommitId, String expresionCommitId, int groupCommitId, int minutesAddDate ) {
 		 super(owner,ModalityType.APPLICATION_MODAL);
 		 setTitle("Mapeo y otra configuracion");
 		 setIconImage(Toolkit.getDefaultToolkit().getImage(MapeoDlg.class.getResource("/images/arrow-divide2.png")));
@@ -109,7 +116,7 @@ public class MapeoDlg extends JDialog implements ActionListener {
 		getTextFichParaCommitId().setText(ficheroParaCommitId);
 		getTextCommitIdRegExp().setText(expresionCommitId);
 		getTextGroupNumber().setText(""+groupCommitId);
-		
+		getTextMinutesAddDate().setText(""+minutesAddDate);
 	}
 	
 	private JTextPane getTextReglasMapeo() {
@@ -201,10 +208,20 @@ public class MapeoDlg extends JDialog implements ActionListener {
 			throw new Exception("Error la expresion para el commitId no funciona");
 		}
 		try {
-			mapeoInfo.commitIdExpresionGroup=Integer.parseInt(getTextGroupNumber().getText());
+			String v=getTextGroupNumber().getText().trim();
+			mapeoInfo.commitIdExpresionGroup=Integer.parseInt(v);
 		} catch (Exception r) {
 			throw new Exception("el grupo para la expresion de commitId no es un numero");
 		}
+		
+		
+		try {
+			String v=getTextMinutesAddDate().getText().trim();
+			mapeoInfo.minutesAddDate=Integer.parseInt(v);
+		} catch (Exception r) {
+			throw new Exception("los minutos para añadir a la fecha no son un numero");
+		}
+		
 		return mapeoInfo;
 	}
 	
@@ -276,6 +293,7 @@ public class MapeoDlg extends JDialog implements ActionListener {
 			panelFichParaFecha.setLayout(new BorderLayout(0, 0));
 			panelFichParaFecha.add(getLblFichParaFecha(), BorderLayout.WEST);
 			panelFichParaFecha.add(getTextFichParaFecha(), BorderLayout.CENTER);
+			panelFichParaFecha.add(getPanelOpcionesFecha(), BorderLayout.EAST);
 		}
 		return panelFichParaFecha;
 	}
@@ -342,7 +360,7 @@ public class MapeoDlg extends JDialog implements ActionListener {
 		if (textGroupNumber == null) {
 			textGroupNumber = new JTextField();
 			textGroupNumber.setToolTipText("ejemplo: 4");
-			textGroupNumber.setColumns(10);
+			textGroupNumber.setColumns(4);
 		}
 		return textGroupNumber;
 	}
@@ -357,5 +375,29 @@ public class MapeoDlg extends JDialog implements ActionListener {
 			});
 		}
 		return btnNewButton;
+	}
+	private JPanel getPanelOpcionesFecha() {
+		if (panelOpcionesFecha == null) {
+			panelOpcionesFecha = new JPanel();
+			panelOpcionesFecha.setLayout(new BorderLayout(0, 0));
+			panelOpcionesFecha.add(getLblAddMinutes(), BorderLayout.WEST);
+			panelOpcionesFecha.add(getTextMinutesAddDate(), BorderLayout.CENTER);
+		}
+		return panelOpcionesFecha;
+	}
+	private JLabel getLblAddMinutes() {
+		if (lblAddMinutes == null) {
+			lblAddMinutes = new JLabel(" minutes:");
+			lblAddMinutes.setToolTipText("add minutes to the date");
+		}
+		return lblAddMinutes;
+	}
+	private JTextField getTextMinutesAddDate() {
+		if (textMinutesAddDate == null) {
+			textMinutesAddDate = new JTextField();
+			textMinutesAddDate.setToolTipText("minutos a\u00F1adir a la fecha");
+			textMinutesAddDate.setColumns(3);
+		}
+		return textMinutesAddDate;
 	}
 }

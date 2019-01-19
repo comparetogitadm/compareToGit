@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.bcjj.gitCompare.gui.GitCompareMainWindow.Estado;
@@ -31,16 +32,26 @@ public class FileVsGit extends FileInTreeInfo {
 	private GitFileVersionInfo baseVersion=null;
 	private boolean borrar;
 	private String tempFichBase;
+	private String tempDirectoy;
 	
-	public FileVsGit(File fich, GitRepo gitRepo, String gitFile,boolean borrar,String tempFichBase) {
+	ComparacionInfo comparacionInfo=null;
+	
+	
+	public FileVsGit(File fich, GitRepo gitRepo, String gitFile,boolean borrar,String tempDirectoy) {
 		super(fich.getName());
+		this.tempDirectoy=tempDirectoy;
 		this.fich = fich;
 		this.gitRepo = gitRepo;
 		this.gitFile = gitFile;
 		this.borrar=borrar;
-		this.tempFichBase=tempFichBase;
+		this.tempFichBase=tempDirectoy+gitFile;
+		initialize();
 	}
 
+	
+
+	
+	
 	public String getTempFichBase() {
 		return tempFichBase;
 	}
@@ -70,7 +81,7 @@ public class FileVsGit extends FileInTreeInfo {
 		return fich.getName()+" ("+getVersionesConCambios()+") "+commits;
 	}
 
-	public void check() {
+	protected void initialize() { // check()
 		try {
 			versiones=new ArrayList<GitFileVersionInfo>();
 			//ObjectId objectId=new ObjectId(new_1, new_2, new_3, new_4, new_5); addRange(since, until).
@@ -122,14 +133,78 @@ public class FileVsGit extends FileInTreeInfo {
 					
 				}
 			}
+			
+			
+			if (versiones.size()==0) {
+				//fichero nuevo
+			}
+			
+			inicializaFicherosTemporales();
+			
+			evaluaComparacionInfo();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 
+	
+	private void inicializaFicherosTemporales() throws Exception {
+		
+		File f=new File(tempFichBase);
+		String soloNombre=f.getName();
+		String ext="";
+		if (soloNombre.lastIndexOf(".")>0) { //$NON-NLS-1$
+			ext=soloNombre.substring(soloNombre.lastIndexOf(".")); //incluye el punto //$NON-NLS-1$
+		}
+		List<GitFileVersionInfo> versionesRev=new ArrayList<GitFileVersionInfo>(versiones);
+		Collections.reverse(versionesRev);
+		int i=0;
+		for (GitFileVersionInfo version:versionesRev) {
+			i++;
+			String numVer = String.format("%03d", i); //$NON-NLS-1$
+			
+			String tempFile=tempDirectoy+gitFile+"--"+numVer+"--"+version.getCommitId().substring(0, 6)+"--"+version.getFechaComprimidaYMDHMS(); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$
+			if (version.isBase()) {
+				tempFile=tempFile+"-base"; //$NON-NLS-1$
+			}
+			tempFile=tempFile+ext;
+			version.setTempFile_(new File(tempFile));
+		}
+	}
+	
+	
+	public ComparacionInfo evaluaComparacionInfo() {
+		File ultimaVersionEnGit=null;
+        if (this.getVersiones().size()>0) {
+        	ultimaVersionEnGit=this.getVersiones().get(0).getTempFile();
+        }
+        File ficheroDirectorioGit=null;
+        if (this.getFileInGit()!=null && !this.getFileInGit().trim().equals("")) {
+        	ficheroDirectorioGit=new File(this.getFileInGit());
+		}
+        File fichero=null;
+        if (this.getFich()!=null && !this.getFich().getName().endsWith("-del")) {
+        	fichero=this.getFich();
+        }
+        
+		comparacionInfo=new ComparacionInfo();
+		comparacionInfo.setF_FGD(EstadoComparacion.obtenComparacion(fichero,ficheroDirectorioGit));
+		comparacionInfo.setF_VG(EstadoComparacion.obtenComparacion(fichero,ultimaVersionEnGit));
+		comparacionInfo.setVG_FGD(EstadoComparacion.obtenComparacion(ultimaVersionEnGit,ficheroDirectorioGit));
+        return comparacionInfo;
+        
+	}
+	
 
-	
-	
+	public ComparacionInfo getComparacionInfo() {
+		return comparacionInfo;
+	}
+
+	/*
+	public void setComparacionInfo(ComparacionInfo comparacionInfo) {
+		this.comparacionInfo = comparacionInfo;
+	}
+	*/
 	
 	
 	public GitFileVersionInfo getBaseVersion() {

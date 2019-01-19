@@ -85,7 +85,7 @@ public class GitFileVersionInfo {
 		return sdf.format(getFecha());
 	}
 	
-	public File setTempFile(File file) throws Exception {
+	public File setTempFile_(File file) throws Exception {
 		tempFile=file;
 		createTempFile();
 		return tempFile;

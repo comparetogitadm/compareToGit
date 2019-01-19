@@ -66,7 +66,7 @@ import javax.swing.tree.TreeSelectionModel;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.bcjj.gitCompare.Diferencia;
+import org.bcjj.gitCompare.NuevasVersionesInfo;
 import org.bcjj.gitCompare.EstadoProcesado;
 import org.bcjj.gitCompare.FileInTreeInfo;
 import org.bcjj.gitCompare.FileVsGit;
@@ -126,6 +126,31 @@ comp3: BCompare.exe ultimaVersionEnGit fichEnDirectorioFiles versionBaseEnGit fi
 
 public class GitCompareMainWindow implements ContenedorHistorico {
 
+	private final static String SUFIX_DEL="-del"; //$NON-NLS-1$
+	private final static String TEMP_DIR_GITCOMPARE="/temp/gitCompare-"; //$NON-NLS-1$
+	
+	private static final String PROPERTY_PATH = "path."; //$NON-NLS-1$
+	private static final String PROPERTY_USER_NAME = "userName"; //$NON-NLS-1$
+	private static final String PROPERTY_COMMIT_ID_EXPRESION_GROUP = "commitIdExpresionGroup"; //$NON-NLS-1$
+	private static final String PROPERTY_COMMIT_ID_EXPRESION = "commitIdExpresion"; //$NON-NLS-1$
+	private static final String PROPERTY_FICHERO_PARA_COMMIT_ID = "ficheroParaCommitId"; //$NON-NLS-1$
+	private static final String PROPERTY_FICHERO_PARA_FECHA = "ficheroParaFecha"; //$NON-NLS-1$
+	private static final String PROPERTY_GIT_DIR = "gitDir"; //$NON-NLS-1$
+	private static final String PROPERTY_FILES_DIR = "filesDir"; //$NON-NLS-1$
+	private static final String PROPERTY_BRANCH_NAME = "branchName"; //$NON-NLS-1$
+	private static final String PROPERTY_MINUTOS_ADD_FECHA = "minutesAddFecha"; //$NON-NLS-1$
+
+	private static final String DATEFORMAT_compact_yyyyMMdd_g_HHmmss="yyyyMMdd-HHmmss"; //$NON-NLS-1$
+	private static final String DATEFORMAT_yyyyMMdd_HHmm="yyyy/MM/dd HH:mm"; //$NON-NLS-1$
+	private static final String DATEFORMAT_yyyyMMdd_HHmmss="yyyy/MM/dd HH:mm:ss"; //$NON-NLS-1$
+	private static final String DATEFORMAT_yyyyMMdd="yyyy/MM/dd"; //$NON-NLS-1$
+	
+	private final static String StringVacio=""; //$NON-NLS-1$
+	
+	private final static String NL="\r\n"; //$NON-NLS-1$
+	
+
+	
 	private JFrame frmGitcompare;
 	private JPanel panelCabecera;
 	private JSplitPane splitPaneCabecera;
@@ -181,8 +206,8 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	ImageIcon iconoConflictosDistintoUsuario;
 	ImageIcon iconoPendiente;
 	ImageIcon iconoHecho;
-	ImageIcon iconoPendiente10;
-	ImageIcon iconoHecho10;
+	ImageIcon iconoIgual;
+	ImageIcon iconoDistinto;
 	
 	private JButton btnRefresh;
 	private JLabel lblPrjfile;
@@ -191,11 +216,11 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	private JComboBox<String> CmbProjectFile;
 	private DefaultComboBoxModel<String> cmbProjectFileModel;
 
-	private ComboUtil comboUtil=new ComboUtil("gitCompare", 10);
-	private ComboName comboNameProject=new ComboName("project");
-	private ComboName comboNameCompareApp=new ComboName("compareApp");
+	private ComboUtil comboUtil=new ComboUtil("gitCompare", 10); //$NON-NLS-1$
+	private ComboName comboNameProject=new ComboName("project"); //$NON-NLS-1$
+	private ComboName comboNameCompareApp=new ComboName("compareApp"); //$NON-NLS-1$
 	private DefaultComboBoxModel<String> cmbFechaDesdeModel;
-	private ComboName comboNameFecha=new ComboName("fromDate");
+	private ComboName comboNameFecha=new ComboName("fromDate"); //$NON-NLS-1$
 	private JButton btnMaps;
 	private JButton btnSave;
 	private String compareCommand;
@@ -204,7 +229,8 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	private String confMapeoFicheroParaFecha;
 	private String confMapeoFicheroParaCommitId;
 	private String confMapeoCommitIdExpresion;
-	private int confMapeoCommitIdExpresionGroup;
+	private int confMapeoCommitIdExpresionGroup=0;
+	private int confMapeoMinutosAddFecha=0;
 	
 	private JPanel panel_8;
 	private JTextField commitInfo;
@@ -224,7 +250,6 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	private JComboBox<String> cmbFechaDesde;
 	private JPanel panelAccionesSeleccion;
 	private JButton btnCompareVsGit;
-	private JLabel lblNewLabel;
 	private JLabel lblAuxDir;
 	private JTextField txtTempDir;
 	private JButton btnComparebase;
@@ -249,7 +274,13 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	private JLabel lblOptionBranch;
 	private JTextField textOptionBranch;
 	private JLabel lblNewLabel_1;
+	private JPanel panelOpcionesArbol;
+	private JPanel panelBotoneraArbol;
+	private JButton fileStatus;
+	private JButton allFilesStatus;
 
+	private List<FileVsGit> filesGit=null;
+	private JPanel panelOpcionFecha;
 	
 	/**
 	 * Launch the application.
@@ -277,7 +308,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 		try {
 			compareCommand=comboUtil.loadPreference(comboNameCompareApp);
 		} catch (Exception e) {
-			compareCommand="C:/Program Files (x86)/Beyond Compare 3/BCompare.exe";
+			compareCommand="C:/Program Files (x86)/Beyond Compare 3/BCompare.exe"; //$NON-NLS-1$
 			try {
 				comboUtil.savePreference(compareCommand,comboNameCompareApp);
 			} catch (IOException e1) {
@@ -288,13 +319,12 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	}
 
 	private void initIcons() {
-		iconoSinConflictos = createImageIcon("/images/cart-go.png");
-		iconoConflictosMismoUsuario = createImageIcon("/images/dialog-warning-3.png");
-		iconoConflictosDistintoUsuario = createImageIcon("/images/arrow-divide2.png");
-		iconoPendiente = createImageIcon("/images/edit-find-6.png");
-		iconoHecho = createImageIcon("/images/dialog-ok-4.png");
-		//iconoPendiente10=resize(iconoPendiente, 10);
-		//iconoHecho10=resize(iconoHecho, 10);
+		iconoSinConflictos = createImageIcon("/images/cart-go.png"); //$NON-NLS-1$
+		iconoConflictosMismoUsuario = createImageIcon("/images/dialog-warning-3.png"); //$NON-NLS-1$
+		iconoConflictosDistintoUsuario = createImageIcon("/images/arrow-divide2.png"); //$NON-NLS-1$
+		iconoPendiente = createImageIcon("/images/edit-find-6.png"); //$NON-NLS-1$
+		iconoHecho = createImageIcon("/images/dialog-ok-4.png"); //$NON-NLS-1$
+		
 	}
 
 	
@@ -319,8 +349,8 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	 */
 	private void initialize() {
 		frmGitcompare = new JFrame();
-		frmGitcompare.setIconImage(Toolkit.getDefaultToolkit().getImage(GitCompareMainWindow.class.getResource("/images/arrow-divide2.png")));
-		frmGitcompare.setTitle("GitCompare");
+		frmGitcompare.setIconImage(Toolkit.getDefaultToolkit().getImage(GitCompareMainWindow.class.getResource("/images/arrow-divide2.png"))); //$NON-NLS-1$
+		frmGitcompare.setTitle("GitCompare"); //$NON-NLS-1$
 		frmGitcompare.setBounds(100, 100, 920, 572);
 		frmGitcompare.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frmGitcompare.getContentPane().add(getPanelCabecera(), BorderLayout.NORTH);
@@ -334,7 +364,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	
 	protected void checkStatus() throws Exception {
 		
-		FileInTreeInfo fileInTreeInfo=new FileInTreeInfo("");
+		FileInTreeInfo fileInTreeInfo=new FileInTreeInfo(StringVacio);
 		DefaultMutableTreeNode rootNode = new DefaultMutableTreeNode(fileInTreeInfo);
 		getFilesTreeModel().setRoot(rootNode);
 		getFilesTreeModel().reload();
@@ -362,9 +392,9 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 		}
 		showGitInfo(gitRepo);
 
-		SimpleDateFormat sdf=new SimpleDateFormat("yyyyMMdd-HHmmss");
+		SimpleDateFormat sdf=new SimpleDateFormat(DATEFORMAT_compact_yyyyMMdd_g_HHmmss);
 		Date ahora=new Date();
-		File tempDir=new File("c:/temp/gitCompare-"+sdf.format(ahora));
+		File tempDir=new File(TEMP_DIR_GITCOMPARE+sdf.format(ahora));
 		getTxtTempDir().setText(tempDir.getPath());
 		gitRepo.setTempDir(tempDir);
 		readTreeDir(dirFiles,gitRepo,fechaDesde,tempDir);
@@ -372,8 +402,8 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	
 	protected void refreshBranch() {
 		try {
-			getTxtBranchname().setText("");
-			getCommitInfo().setText("");
+			getTxtBranchname().setText(StringVacio);
+			getCommitInfo().setText(StringVacio);
 			GitRepo gitRepo=new GitRepo(getTxtGitdirectory().getText(),getTxtCommitId().getText());
 			getTxtCommitId().setText(gitRepo.getFromPartialCommitId());
 			showGitInfo(gitRepo);
@@ -391,7 +421,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 		getTxtBranchname().setText(gitRepo.getBranchName());
 		getCommitInfo().setText(gitRepo.getFromCommitInfo());
 		getCommitInfo().setCaretPosition(0);
-		getCommitInfo().setToolTipText(gitRepo.getFromCommitInfo());
+		getCommitInfo().setToolTipText("informacion de commit id");
 	}
 	
 	protected void refreshMap() {
@@ -405,7 +435,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	
 	private void openProject() throws IOException {
 		String filenameValue=getProjectFile();
-		if (filenameValue==null || filenameValue.trim().equals("")) {
+		if (filenameValue==null || filenameValue.trim().equals(StringVacio)) {
 			return;
 		}
 		Properties p=new Properties();
@@ -414,22 +444,28 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 		try {
 			r=new FileInputStream(filenameValue);
 			p.load(r);
-			String branchName=p.getProperty("branchName");
+			String branchName=p.getProperty(PROPERTY_BRANCH_NAME); 
 			getTextOptionBranch().setText(branchName);
-			getTxtFilesDir().setText(p.getProperty("filesDir"));
-			getTxtGitdirectory().setText(p.getProperty("gitDir"));
-			getTxtUserName().setText(p.getProperty("userName"));
-			confMapeoFicheroParaFecha=p.getProperty("ficheroParaFecha","");
-			confMapeoFicheroParaCommitId=p.getProperty("ficheroParaCommitId","");
-			confMapeoCommitIdExpresion=p.getProperty("commitIdExpresion","");
+			getTxtFilesDir().setText(p.getProperty(PROPERTY_FILES_DIR)); 
+			getTxtGitdirectory().setText(p.getProperty(PROPERTY_GIT_DIR)); 
+			getTxtUserName().setText(p.getProperty(PROPERTY_USER_NAME)); 
+			confMapeoFicheroParaFecha=p.getProperty(PROPERTY_FICHERO_PARA_FECHA,StringVacio); 
+			confMapeoFicheroParaCommitId=p.getProperty(PROPERTY_FICHERO_PARA_COMMIT_ID,StringVacio); 
+			confMapeoCommitIdExpresion=p.getProperty(PROPERTY_COMMIT_ID_EXPRESION,StringVacio);
 			try {
-				confMapeoCommitIdExpresionGroup=Integer.parseInt(p.getProperty("commitIdExpresionGroup","0"));
+				confMapeoCommitIdExpresionGroup=Integer.parseInt(p.getProperty(PROPERTY_COMMIT_ID_EXPRESION_GROUP,"0")); //$NON-NLS-1$
 			} catch (Exception ee) {
 				confMapeoCommitIdExpresionGroup=0;
 			}
+			try {
+				confMapeoMinutosAddFecha=Integer.parseInt(p.getProperty(PROPERTY_MINUTOS_ADD_FECHA,"0")); //$NON-NLS-1$
+			} catch (Exception ee) {
+				confMapeoMinutosAddFecha=0;
+			}
+			
 			refreshMapeoData();
 			for (int i=0;i<1000;i++) {
-				String x=p.getProperty("path."+i);
+				String x=p.getProperty(PROPERTY_PATH+i); //$NON-NLS-1$
 				if (x!=null) {
 					confMapeoReglasMapeo.add(x);
 				}
@@ -455,12 +491,12 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 		boolean ponerCommitId=false;
 		boolean puestoCommitId=false;
 		try {
-			if (confMapeoFicheroParaFecha!=null && !confMapeoFicheroParaFecha.trim().equals("")) {
+			if (confMapeoFicheroParaFecha!=null && !confMapeoFicheroParaFecha.trim().equals(StringVacio)) {
 				ponerFecha=true;
 				File fFecha=new File(confMapeoFicheroParaFecha);
 				if (fFecha.exists() && fFecha.isFile()) {
-					Date d=new Date(fFecha.lastModified());
-					SimpleDateFormat sdf=new SimpleDateFormat("yyyy/MM/dd HH:mm");
+					Date d=new Date(fFecha.lastModified()+(confMapeoMinutosAddFecha*60*1000));
+					SimpleDateFormat sdf=new SimpleDateFormat(DATEFORMAT_yyyyMMdd_HHmm);
 					String fec=sdf.format(d);
 					getCmbFechaDesde().setSelectedItem(fec);
 					puestaFecha=true;
@@ -470,7 +506,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 			System.out.println("error al refrescar los datos de mapeo para el fichero para fecha "+r);
 		}
 		try {
-			if (confMapeoFicheroParaCommitId!=null && !confMapeoFicheroParaCommitId.trim().equals("")) {
+			if (confMapeoFicheroParaCommitId!=null && !confMapeoFicheroParaCommitId.trim().equals(StringVacio)) {
 				ponerCommitId=true;
 				File fCommit=new File(confMapeoFicheroParaCommitId);
 				if (fCommit.exists() && fCommit.isFile()) {
@@ -484,14 +520,14 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 		} catch (Exception r) {
 			System.out.println("error al refrescar los datos de mapeo para el obterner el commitId "+r);
 		}
-		String falta="";
+		String falta=StringVacio;
 		if (ponerFecha && !puestaFecha) {
 			falta=falta+ "No se ha establecido la fecha desde.";
 		}
 		if (ponerCommitId && !puestoCommitId) {
 			falta=falta+"No se ha puesto el commitId";
 		}
-		if (!falta.trim().equals("")) {
+		if (!falta.trim().equals(StringVacio)) {
 			showMessage(falta);
 		}
 		refreshBranch();
@@ -499,7 +535,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 
 	private String getCommitIdFromFile(File fCommit) throws IOException {
 		String leido = FileUtils.readFileToString(fCommit);
-		String[] lineas = leido.split("\r\n");
+		String[] lineas = leido.split(NL);
 		Pattern pattern = Pattern.compile(confMapeoCommitIdExpresion);
 		for (String txt:lineas) {
 			try {
@@ -518,24 +554,26 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	protected void saveMaps() throws IOException {
 		String filenameValue=getProjectFile();
 		Properties p=new Properties();
-		p.setProperty("branchName", getTextOptionBranch().getText());
-		p.setProperty("filesDir", getTxtFilesDir().getText());
-		p.setProperty("gitDir", getTxtGitdirectory().getText());
+		p.setProperty(PROPERTY_BRANCH_NAME, getTextOptionBranch().getText());
+		p.setProperty(PROPERTY_FILES_DIR, getTxtFilesDir().getText());
+		p.setProperty(PROPERTY_GIT_DIR, getTxtGitdirectory().getText());
 		
-		p.setProperty("ficheroParaFecha", confMapeoFicheroParaFecha);
-		p.setProperty("ficheroParaCommitId", confMapeoFicheroParaCommitId);
-		p.setProperty("commitIdExpresion", confMapeoCommitIdExpresion);
-		p.setProperty("commitIdExpresionGroup", ""+confMapeoCommitIdExpresionGroup);
+		p.setProperty(PROPERTY_FICHERO_PARA_FECHA, confMapeoFicheroParaFecha);
+		p.setProperty(PROPERTY_FICHERO_PARA_COMMIT_ID, confMapeoFicheroParaCommitId);
+		p.setProperty(PROPERTY_COMMIT_ID_EXPRESION, confMapeoCommitIdExpresion);
+		p.setProperty(PROPERTY_COMMIT_ID_EXPRESION_GROUP, StringVacio+confMapeoCommitIdExpresionGroup);
+		p.setProperty(PROPERTY_MINUTOS_ADD_FECHA, StringVacio+confMapeoMinutosAddFecha);
 		
-		p.setProperty("userName", getTxtUserName().getText());
+		
+		p.setProperty(PROPERTY_USER_NAME, getTxtUserName().getText());
 		
 		int i=0;
 		for (String r:confMapeoReglasMapeo) {
-			p.setProperty("path."+i, r);
+			p.setProperty(PROPERTY_PATH+i, r);
 			i++;
 		}
 		FileOutputStream fileOutputStream=new FileOutputStream(filenameValue);
-		p.save(fileOutputStream, "");
+		p.save(fileOutputStream, StringVacio);
 		fileOutputStream.close();
 	}
 	
@@ -565,7 +603,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 				getTextareaOldversion().setText(byteArrayOutputStream.toString());
 				getTextareaOldversion().setCaretPosition(0);
 			} catch (Exception r) {
-				getTextareaOldversion().setText("*ERROR ::"+r);
+				getTextareaOldversion().setText("*ERROR ::"+r); //$NON-NLS-1$
 			}
 		}
 		if (historicoSel2!=null) {
@@ -594,7 +632,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 				getTextareaOldversion().setText(byteArrayOutputStream.toString());
 				getTextareaOldversion().setCaretPosition(0);
 			} catch (Exception r) {
-				getTextareaOldversion().setText("*ERROR ::"+r);
+				getTextareaOldversion().setText("*ERROR ::"+r); //$NON-NLS-1$
 			}
 		}
 	}
@@ -616,18 +654,18 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 		getFilesTreeModel().setRoot(rootNode);
 		String baseDirAbsolute = getDirectoryName(dirFiles);
 		String tempDirectoy=getDirectoryName(tempDir);
+		filesGit=new ArrayList<FileVsGit>();
 		
-		
-		leeDirectorio(dirFiles,rootNode,baseDirAbsolute,gitRepo,fechaDesde,tempDirectoy);
+		leeDirectorio(dirFiles,rootNode,filesGit,baseDirAbsolute,gitRepo,fechaDesde,tempDirectoy);
 		getFilesTreeModel().reload();
 		expandAll(getTreeFiles());
 	}
 
 	private String getDirectoryName(File dir) {
 		String dirAbsolute=dir.getAbsolutePath();
-		dirAbsolute=StringUtils.replace(dirAbsolute,"\\","/");
-		if (!dirAbsolute.endsWith("/")) {
-			dirAbsolute=dirAbsolute+"/";
+		dirAbsolute=StringUtils.replace(dirAbsolute,"\\","/"); //$NON-NLS-1$ //$NON-NLS-2$
+		if (!dirAbsolute.endsWith("/")) { //$NON-NLS-1$
+			dirAbsolute=dirAbsolute+"/"; //$NON-NLS-1$
 		}
 		return dirAbsolute;
 	}
@@ -650,7 +688,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 		    // tree.collapsePath(parent);
 		  }
 	
-	private void leeDirectorio(File dirFiles, DefaultMutableTreeNode padreNode,String baseDirAbsolute,GitRepo gitRepo,Date fechaDesde,String tempDirectoy) throws Exception {
+	private void leeDirectorio(File dirFiles, DefaultMutableTreeNode padreNode,List<FileVsGit> filesGit,String baseDirAbsolute,GitRepo gitRepo,Date fechaDesde,String tempDirectoy) throws Exception {
 		File [] fichs=dirFiles.listFiles();
 		Arrays.sort(fichs, new Comparator<File>() {
 			@Override
@@ -670,50 +708,28 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 			if (fich.isFile() && esMasActual(fich,fechaDesde)) {
 				String fileAbs=fich.getAbsolutePath();
 				fileAbs=fileAbs.substring(baseDirAbsolute.length()); //como baseDirAbsolute termina forzosamente por /, fileAbs no comenzará por /
-				fileAbs=StringUtils.replace(fileAbs,"\\","/");
+				fileAbs=StringUtils.replace(fileAbs,"\\","/"); //$NON-NLS-1$ //$NON-NLS-2$
 				boolean borrar=false;
-				if (fileAbs.endsWith("-del")) {
-					fileAbs=fileAbs.substring(0, fileAbs.length()-"-del".length());
+				if (fileAbs.endsWith(SUFIX_DEL)) {
+					fileAbs=fileAbs.substring(0, fileAbs.length()-SUFIX_DEL.length());
 					borrar=true;
 				}
 				String fileAbsMapeado=mapearReglas(fileAbs);  //  src/web/web-prod/srv/main.jsp
-				if (fileAbsMapeado!="!") {
-					String tempF=tempDirectoy+fileAbsMapeado;
-					File f=new File(tempF);
-					String soloNombre=f.getName();
-					String ext="";
-					if (soloNombre.lastIndexOf(".")>0) {
-						ext=soloNombre.substring(soloNombre.lastIndexOf(".")); //incluye el punto
-					}
+				if (fileAbsMapeado!="!") { //$NON-NLS-1$
+
 					
-					FileVsGit fileVsGit=new FileVsGit(fich,gitRepo,fileAbsMapeado,borrar,tempF);
+					FileVsGit fileVsGit=new FileVsGit(fich,gitRepo,fileAbsMapeado,borrar,tempDirectoy);
+					filesGit.add(fileVsGit);
 					if (fileAbsMapeado.contains("codigo.java")) {
 						System.out.println(fileAbsMapeado);
 					}
-					fileVsGit.check();
+					//fileVsGit.initialize(); //.check()
 					List<GitFileVersionInfo> versiones=fileVsGit.getVersiones();
-					if (versiones.size()==0) {
-						//fichero nuevo
-					}
-					
-					List<GitFileVersionInfo> versionesRev=new ArrayList<GitFileVersionInfo>(versiones);
-					Collections.reverse(versionesRev);
-					int i=0;
-					for (GitFileVersionInfo version:versionesRev) {
-						i++;
-						String numVer = String.format("%03d", i);
-						
-						String tempFile=tempDirectoy+fileAbsMapeado+"--"+numVer+"--"+version.getCommitId().substring(0, 6)+"--"+version.getFechaComprimidaYMDHMS();
-						if (version.isBase()) {
-							tempFile=tempFile+"-base";
-						}
-						tempFile=tempFile+ext;
-						version.setTempFile(new File(tempFile));
-					}
+
 					
 					
 					if (fileVsGit.getVersionesConCambios()<=0) {
-						fileVsGit.setDiferencia(Diferencia.SinNuevasVersiones);
+						fileVsGit.setNuevasVersionesInfo(NuevasVersionesInfo.SinNuevasVersiones);
 					} else {
 						boolean distintoAutor=false;
 						for (GitFileVersionInfo version:versiones) {
@@ -722,21 +738,21 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 							}
 						}
 						if (distintoAutor) {
-							fileVsGit.setDiferencia(Diferencia.NuevasVersionesDistintosAutores);
+							fileVsGit.setNuevasVersionesInfo(NuevasVersionesInfo.NuevasVersionesDistintosAutores);
 						} else {
-							fileVsGit.setDiferencia(Diferencia.NuevasVersionesMismoAutor);
+							fileVsGit.setNuevasVersionesInfo(NuevasVersionesInfo.NuevasVersionesMismoAutor);
 						}
 					}
 					node = new DefaultMutableTreeNode(fileVsGit);
 					padreNode.add(node);
-					actualizaConflictoEnNodosPadres(padreNode,fileVsGit.getDiferencia());
+					actualizaConflictoEnNodosPadres(padreNode,fileVsGit.getNuevasVersionesInfo());
 				}
 			}
 			if (fich.isDirectory()) {
 				FileInTreeInfo fileInTreeInfo=new FileInTreeInfo(fich.getName());
-				fileInTreeInfo.setDiferencia(Diferencia.SinNuevasVersiones);
+				fileInTreeInfo.setNuevasVersionesInfo(NuevasVersionesInfo.SinNuevasVersiones);
 				node = new DefaultMutableTreeNode(fileInTreeInfo);
-				leeDirectorio(fich, node,baseDirAbsolute,gitRepo,fechaDesde,tempDirectoy);
+				leeDirectorio(fich, node,filesGit, baseDirAbsolute,gitRepo,fechaDesde,tempDirectoy);
 				if (node.getChildCount()>0) {
 					padreNode.add(node);
 				}
@@ -744,6 +760,8 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 			
 		}
 	}
+
+
 
 
 	private boolean esMasActual(File fich, Date fechaDesde) {
@@ -758,10 +776,10 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 
 	private String trimPathSymbol(String exp) {
 		exp=exp.trim();
-		while (exp.startsWith("/")) {
+		while (exp.startsWith("/")) { //$NON-NLS-1$
 			exp=exp.substring(1);
 		}
-		while (exp.endsWith("/")) {
+		while (exp.endsWith("/")) { //$NON-NLS-1$
 			exp=exp.substring(0, exp.length()-1);
 		}
 		exp=exp.trim();
@@ -769,17 +787,17 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	}
 	
 	private String mapearReglas(String fileAbs) { //como baseDirAbsolute termina forzosamente por /, fileAbs no comenzará por /
-		fileAbs=StringUtils.replace(fileAbs, "\\", "/");
+		fileAbs=StringUtils.replace(fileAbs, "\\", "/"); //$NON-NLS-1$ //$NON-NLS-2$
 		if (confMapeoReglasMapeo==null) {
 			return fileAbs;
 		}
 		for (String s:confMapeoReglasMapeo) {
-			StringTokenizer st=new StringTokenizer(s,"|");
-			String buscar=trimPathSymbol(st.nextToken())+"/";
-			String mapear=trimPathSymbol(st.nextToken())+"/";
+			StringTokenizer st=new StringTokenizer(s,"|"); //$NON-NLS-1$
+			String buscar=trimPathSymbol(st.nextToken())+"/"; //$NON-NLS-1$
+			String mapear=trimPathSymbol(st.nextToken())+"/"; //$NON-NLS-1$
 			if (fileAbs.startsWith(buscar)) {
-				if (mapear.equals("!/")) {
-					return "!";
+				if (mapear.equals("!/")) { //$NON-NLS-1$
+					return "!"; //$NON-NLS-1$
 				}
 				String mapeado=fileAbs.substring(buscar.length());
 				mapeado=mapear+mapeado;
@@ -789,20 +807,20 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 		return fileAbs;
 	}
 
-	private void actualizaConflictoEnNodosPadres(DefaultMutableTreeNode padreNode, Diferencia diferencia) {
+	private void actualizaConflictoEnNodosPadres(DefaultMutableTreeNode padreNode, NuevasVersionesInfo diferencia) {
 		if (padreNode!=null) {
 			Object userObject=padreNode.getUserObject();
 			boolean seguir=true;
 			if (userObject instanceof FileInTreeInfo) {
 				FileInTreeInfo fileInTreeInfo=(FileInTreeInfo)userObject;
-				if (fileInTreeInfo.getDiferencia()==Diferencia.NuevasVersionesDistintosAutores) {
+				if (fileInTreeInfo.getNuevasVersionesInfo()==NuevasVersionesInfo.NuevasVersionesDistintosAutores) {
 					seguir=false;
-				} else if (fileInTreeInfo.getDiferencia()==diferencia) {
+				} else if (fileInTreeInfo.getNuevasVersionesInfo()==diferencia) {
 					seguir=false;
-				} else if (fileInTreeInfo.getDiferencia()==Diferencia.SinNuevasVersiones) {
-					fileInTreeInfo.setDiferencia(diferencia);
-				} else if (fileInTreeInfo.getDiferencia()==Diferencia.NuevasVersionesMismoAutor && diferencia==Diferencia.NuevasVersionesDistintosAutores) {
-					fileInTreeInfo.setDiferencia(diferencia);
+				} else if (fileInTreeInfo.getNuevasVersionesInfo()==NuevasVersionesInfo.SinNuevasVersiones) {
+					fileInTreeInfo.setNuevasVersionesInfo(diferencia);
+				} else if (fileInTreeInfo.getNuevasVersionesInfo()==NuevasVersionesInfo.NuevasVersionesMismoAutor && diferencia==NuevasVersionesInfo.NuevasVersionesDistintosAutores) {
+					fileInTreeInfo.setNuevasVersionesInfo(diferencia);
 				}
 			}
 			if(seguir && padreNode.getParent()!=null && padreNode.getParent() instanceof DefaultMutableTreeNode) {
@@ -817,7 +835,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 			GitCompareMainWindow esteGitCompareMainWindow=this;
 			treeFiles.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
 			
-			FileTreeCellRenderer fileTreeCellRenderer=new FileTreeCellRenderer( iconoSinConflictos,iconoConflictosMismoUsuario,iconoConflictosDistintoUsuario,iconoPendiente,iconoHecho,iconoPendiente10,iconoHecho10);
+			FileTreeCellRenderer fileTreeCellRenderer=new FileTreeCellRenderer( iconoSinConflictos,iconoConflictosMismoUsuario,iconoConflictosDistintoUsuario,iconoPendiente,iconoHecho);
 			
 			treeFiles.setCellRenderer(fileTreeCellRenderer);
 			
@@ -826,7 +844,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	            public void valueChanged(TreeSelectionEvent e) {
 	            	getChckbxDone().setSelected(false);
 	            	getPanelListaHistoricos().removeAll();
-	            	getTextareaOldversion().setText("");
+	            	getTextareaOldversion().setText(StringVacio);
 	                selectedNode = (DefaultMutableTreeNode) treeFiles.getLastSelectedPathComponent();
 	                if (selectedNode!=null) {
 		                Object userObject=selectedNode.getUserObject();
@@ -958,7 +976,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	public String askFile(String actual,String titulo) {
 		JFileChooser chooser = new JFileChooser(); 
 		File d=null;
-		if (actual!=null && !actual.equals("")) {
+		if (actual!=null && !actual.equals(StringVacio)) {
 			d=new File(actual);
 			if (!d.exists()) {
 				d=null;
@@ -968,7 +986,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 			}
 		}
 		if (d==null) {
-			d=new File(".");
+			d=new File("."); //$NON-NLS-1$
 		}
 	    chooser.setCurrentDirectory(d);
 	    chooser.setDialogTitle(titulo);
@@ -984,7 +1002,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	public String askDirectory(String actual,String titulo) {
 		JFileChooser chooser = new JFileChooser(); 
 		File d=null;
-		if (actual!=null && !actual.equals("")) {
+		if (actual!=null && !actual.equals(StringVacio)) {
 			d=new File(actual);
 			if (!d.exists()) {
 				d=null;
@@ -994,7 +1012,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 			}
 		}
 		if (d==null) {
-			d=new File(".");
+			d=new File("."); //$NON-NLS-1$
 		}
 	    chooser.setCurrentDirectory(d);
 	    chooser.setDialogTitle(titulo);
@@ -1011,9 +1029,11 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	
 	private JButton getBtnCheckStatus() {
 		if (btnGitCompare == null) {
-			btnGitCompare = new JButton("git Compare");
+			btnGitCompare = new JButton("git Compare"); //$NON-NLS-1$
+			btnGitCompare.setToolTipText("Realizar la comparacion entre el directorio y el repositorio git");
+			btnGitCompare.setForeground(Color.BLUE);
 			btnGitCompare.setMargin(new Insets(1, 1, 2, 1));
-			btnGitCompare.setFont(new Font("Tahoma", Font.BOLD, 12));
+			btnGitCompare.setFont(new Font("Tahoma", Font.BOLD, 13)); //$NON-NLS-1$
 			btnGitCompare.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
 					try {
@@ -1036,7 +1056,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 
 	private JLabel getLblGit() {
 		if (lblGit == null) {
-			lblGit = new JLabel("GIT :");
+			lblGit = new JLabel("GIT :"); //$NON-NLS-1$
 			lblGit.setMinimumSize(new Dimension(24, 24));
 			lblGit.setPreferredSize(new Dimension(24, 24));
 		}
@@ -1045,9 +1065,10 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	private JTextField getTxtBranchname() {
 		if (txtBranchname == null) {
 			txtBranchname = new JTextField();
-			txtBranchname.setFont(new Font("Tahoma", Font.PLAIN, 16));
+			txtBranchname.setToolTipText("branch actual del repositorio");
+			txtBranchname.setFont(new Font("Tahoma", Font.PLAIN, 16)); //$NON-NLS-1$
 			txtBranchname.setForeground(Color.MAGENTA);
-			txtBranchname.setText("-");
+			txtBranchname.setText("-"); //$NON-NLS-1$
 			txtBranchname.setEditable(false);
 			txtBranchname.setColumns(10);
 		}
@@ -1055,37 +1076,40 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	}
 	private JLabel getLblBranchname() {
 		if (lblBranchname == null) {
-			lblBranchname = new JLabel("branchName:");
+			lblBranchname = new JLabel("branchName:"); //$NON-NLS-1$
 		}
 		return lblBranchname;
 	}
 	private JTextField getTxtGitdirectory() {
 		if (txtGitdirectory == null) {
 			txtGitdirectory = new JTextField();
+			txtGitdirectory.setToolTipText("directorio del repositorio git");
 			txtGitdirectory.setPreferredSize(new Dimension(6, 20));
 			txtGitdirectory.setMinimumSize(new Dimension(6, 20));
-			txtGitdirectory.setText("");
+			txtGitdirectory.setText(StringVacio);
 			txtGitdirectory.setColumns(10);
 		}
 		return txtGitdirectory;
 	}
 	private JLabel getLblFilesDir() {
 		if (lblFilesDir == null) {
-			lblFilesDir = new JLabel("filesDir:");
+			lblFilesDir = new JLabel("filesDir:"); //$NON-NLS-1$
 		}
 		return lblFilesDir;
 	}
 	private JTextField getTxtFilesDir() {
 		if (txtFilesDir == null) {
 			txtFilesDir = new JTextField();
-			txtFilesDir.setText("");
+			txtFilesDir.setToolTipText("directorio a comparar");
+			txtFilesDir.setText(StringVacio);
 			txtFilesDir.setColumns(10);
 		}
 		return txtFilesDir;
 	}
 	private JButton getBtnOpenGitDir() {
 		if (btnOpenGitDir == null) {
-			btnOpenGitDir = new JButton("selectGit");
+			btnOpenGitDir = new JButton("selectGit"); //$NON-NLS-1$
+			btnOpenGitDir.setToolTipText("selecciona el directorio del repositorio git");
 			btnOpenGitDir.setMargin(new Insets(1, 1, 2, 1));
 			btnOpenGitDir.setMinimumSize(new Dimension(73, 20));
 			btnOpenGitDir.addActionListener(new ActionListener() {
@@ -1099,7 +1123,8 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 
 	private JButton getBtnOpenFilesDir() {
 		if (btnOpenFilesDir == null) {
-			btnOpenFilesDir = new JButton("selectDir");
+			btnOpenFilesDir = new JButton("selectDir"); //$NON-NLS-1$
+			btnOpenFilesDir.setToolTipText("selecciona el directorio a comparar con git");
 			btnOpenFilesDir.setMargin(new Insets(1, 1, 2, 1));
 			btnOpenFilesDir.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
@@ -1134,6 +1159,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 			panelArbol = new JPanel();
 			panelArbol.setLayout(new BorderLayout(0, 0));
 			panelArbol.add(getScrollPaneArbol(), BorderLayout.CENTER);
+			panelArbol.add(getPanelOpcionesArbol(), BorderLayout.SOUTH);
 		}
 		return panelArbol;
 	}
@@ -1156,7 +1182,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	
 	private DefaultTreeModel  getFilesTreeModel() {
 		if (filesTreeModelRoot==null) {
-			DefaultMutableTreeNode rootNode = new DefaultMutableTreeNode("-");
+			DefaultMutableTreeNode rootNode = new DefaultMutableTreeNode("-"); //$NON-NLS-1$
 			filesTreeModelRoot = new DefaultTreeModel(rootNode);
 		}
 		return filesTreeModelRoot;
@@ -1225,7 +1251,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	}
 	private JLabel getLblCommitid() {
 		if (lblCommitid == null) {
-			lblCommitid = new JLabel("commitId:");
+			lblCommitid = new JLabel("commitId:"); //$NON-NLS-1$
 		}
 		return lblCommitid;
 	}
@@ -1244,20 +1270,21 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	}
 	private JLabel getLblUsername() {
 		if (lblUsername == null) {
-			lblUsername = new JLabel("userName:");
+			lblUsername = new JLabel("userName:"); //$NON-NLS-1$
 		}
 		return lblUsername;
 	}
 	private JTextField getTxtUserName() {
 		if (txtUserName == null) {
 			txtUserName = new JTextField();
+			txtUserName.setToolTipText("tu usuario, del que dar por bueno los cambios");
 			txtUserName.setColumns(10);
 		}
 		return txtUserName;
 	}
 	private JLabel getLabel() {
 		if (label == null) {
-			label = new JLabel("  ");
+			label = new JLabel("  "); //$NON-NLS-1$
 			label.addMouseListener(new MouseAdapter() {
 				@Override
 				public void mouseEntered(MouseEvent e) {
@@ -1269,7 +1296,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	}
 	private JLabel getLabel_1() {
 		if (label_1 == null) {
-			label_1 = new JLabel("  ");
+			label_1 = new JLabel("  "); //$NON-NLS-1$
 		}
 		return label_1;
 	}
@@ -1324,13 +1351,14 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	private JTextArea getTextareaOldversion() {
 		if (txtrTextareaOldversion == null) {
 			txtrTextareaOldversion = new JTextArea();
-			txtrTextareaOldversion.setText("");
+			txtrTextareaOldversion.setText(StringVacio);
 		}
 		return txtrTextareaOldversion;
 	}
 	private JButton getBtnRefresh() {
 		if (btnRefresh == null) {
-			btnRefresh = new JButton("refresh");
+			btnRefresh = new JButton("refresh"); //$NON-NLS-1$
+			btnRefresh.setToolTipText("actualizar la informacion de git");
 			btnRefresh.setMargin(new Insets(1, 1, 2, 1));
 			btnRefresh.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
@@ -1342,7 +1370,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	}
 	private JLabel getLblPrjfile() {
 		if (lblPrjfile == null) {
-			lblPrjfile = new JLabel("prjFile:");
+			lblPrjfile = new JLabel("prjFile:"); //$NON-NLS-1$
 		}
 		return lblPrjfile;
 	}
@@ -1360,14 +1388,15 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	}
 	private JButton getBtnOpenprj() {
 		if (btnOpenprj == null) {
-			btnOpenprj = new JButton("openPrj");
+			btnOpenprj = new JButton("openPrj"); //$NON-NLS-1$
+			btnOpenprj.setToolTipText("selecciona un nuevo fichero de proyecto");
 			btnOpenprj.setMargin(new Insets(1, 1, 2, 1));
 			btnOpenprj.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
 					try {
 						selPrjFile();
 					} catch (IOException r) {
-						showMessage("error "+r);
+						showMessage("error "+r); //$NON-NLS-1$
 					}
 				}
 			});
@@ -1377,14 +1406,15 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	
 	private JButton getBtnLoad() {
 		if (btnLoad == null) {
-			btnLoad = new JButton("load");
+			btnLoad = new JButton("load"); //$NON-NLS-1$
+			btnLoad.setToolTipText("carga el fichero de proyecto");
 			btnLoad.setMargin(new Insets(1, 1, 2, 1));
 			btnLoad.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
 					try {
 						openProject();
 					} catch (IOException r) {
-						showMessage("error "+r);
+						showMessage("error "+r); //$NON-NLS-1$
 					}
 				}
 			});
@@ -1438,7 +1468,8 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 
 	private JButton getBtnMaps() {
 		if (btnMaps == null) {
-			btnMaps = new JButton("maps");
+			btnMaps = new JButton("maps"); //$NON-NLS-1$
+			btnMaps.setToolTipText("muestra los mapeos y otras configuraciones");
 			btnMaps.setMargin(new Insets(1, 1, 2, 1));
 			btnMaps.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
@@ -1452,27 +1483,27 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	protected String getReglasMapeoAsString() {
 		StringBuilder strReglasMapeo=new StringBuilder();
 		for (String r:confMapeoReglasMapeo) {
-			strReglasMapeo.append(r).append("\r\n");
+			strReglasMapeo.append(r).append(NL);
 		}
 		return strReglasMapeo.toString();
 	}
 	
 	protected List<String> listReglasMapeo(String reglas) throws Exception {
 		List<String> lista=new ArrayList<String>();
-		StringTokenizer st=new StringTokenizer(reglas, "\r\n");
+		StringTokenizer st=new StringTokenizer(reglas, NL);
 		while (st.hasMoreTokens()) {
 			String r=st.nextToken().trim();
-			if (!r.trim().equals("")) {
-				if (!r.contains("|")) {
+			if (!r.trim().equals(StringVacio)) {
+				if (!r.contains("|")) { //$NON-NLS-1$
 					throw new Exception("falta  |  en  "+r);
 				}
-				StringTokenizer st2=new StringTokenizer(r,"|");
+				StringTokenizer st2=new StringTokenizer(r,"|"); //$NON-NLS-1$
 				String buscar=trimPathSymbol(st2.nextToken());
 				String mapear=trimPathSymbol(st2.nextToken());
 				if (st2.hasMoreTokens()) {
 					throw new Exception("demasiadas  |  en  "+r);
 				}
-				lista.add(buscar+"|"+mapear);
+				lista.add(buscar+"|"+mapear); //$NON-NLS-1$
 			}
 		}
 		return lista;
@@ -1483,9 +1514,9 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	}
 
 	protected void openMaps(String reglas) {
-		MapeoDlg mapeoDlg=new MapeoDlg(null,reglas,confMapeoFicheroParaFecha,confMapeoFicheroParaCommitId,confMapeoCommitIdExpresion,confMapeoCommitIdExpresionGroup);
+		MapeoDlg mapeoDlg=new MapeoDlg(null,reglas,confMapeoFicheroParaFecha,confMapeoFicheroParaCommitId,confMapeoCommitIdExpresion,confMapeoCommitIdExpresionGroup,confMapeoMinutosAddFecha);
 		boolean aceptado=mapeoDlg.showDialog();
-		String respuestaReglas="";
+		String respuestaReglas=StringVacio;
 		if (aceptado) {
 			try {
 				MapeoInfo mapeoInfo=mapeoDlg.getReglasMapeo();
@@ -1493,11 +1524,12 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 				confMapeoFicheroParaCommitId=mapeoInfo.ficheroParaCommitId;
 				confMapeoCommitIdExpresion=mapeoInfo.commitIdExpresion;
 				confMapeoCommitIdExpresionGroup=mapeoInfo.commitIdExpresionGroup;
+				confMapeoMinutosAddFecha=mapeoInfo.minutesAddDate;
 				respuestaReglas=mapeoInfo.reglasMapeo;
-				respuestaReglas=StringUtils.replace(respuestaReglas, "\\", "/");
+				respuestaReglas=StringUtils.replace(respuestaReglas, "\\", "/"); //$NON-NLS-1$ //$NON-NLS-2$
 				confMapeoReglasMapeo=listReglasMapeo(respuestaReglas);
 			} catch (Exception r) {
-				showMessage(""+r);
+				showMessage(StringVacio+r);
 				openMaps(respuestaReglas);
 			}
 			refreshMapeoData();
@@ -1506,7 +1538,8 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	
 	private JButton getBtnSave() {
 		if (btnSave == null) {
-			btnSave = new JButton("save");
+			btnSave = new JButton("save"); //$NON-NLS-1$
+			btnSave.setToolTipText("guarda el fichero de proyecto");
 			btnSave.setMargin(new Insets(1, 1, 2, 1));
 			btnSave.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
@@ -1653,7 +1686,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 			panelFechaFiles.setLayout(new BorderLayout(0, 0));
 			panelFechaFiles.add(getLblFecha(), BorderLayout.WEST);
 			panelFechaFiles.add(getCmbFechaDesde(), BorderLayout.CENTER);
-			panelFechaFiles.add(getLblNewLabel(), BorderLayout.EAST);
+			panelFechaFiles.add(getPanelOpcionFecha(), BorderLayout.EAST);
 		}
 		return panelFechaFiles;
 	}
@@ -1669,15 +1702,15 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	}
 	private JLabel getLblFecha() {
 		if (lblFecha == null) {
-			lblFecha = new JLabel("fechaDesde");
-			lblFecha.setToolTipText("yyyy/MM/dd HH:mm:ss");
+			lblFecha = new JLabel("fromDate"); //$NON-NLS-1$
+			lblFecha.setToolTipText("solo listar ficheros modificados desde yyyy/MM/dd HH:mm:ss");
 		}
 		return lblFecha;
 	}
 	private JComboBox<String> getCmbFechaDesde() {
 		if (cmbFechaDesde == null) {
 			cmbFechaDesde = new JComboBox<String>();
-			cmbFechaDesde.setToolTipText("yyyy/MM/dd HH:mm:ss");
+			cmbFechaDesde.setToolTipText(DATEFORMAT_yyyyMMdd_HHmmss);
 			cmbFechaDesde.setEditable(true);
 			try {
 				cmbFechaDesde.setModel(getCmbFechaDesdeModel());
@@ -1699,11 +1732,11 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 			try {
 				comboUtil.loadPreference(cmbFechaDesdeModel, comboNameFecha);
 				String x0=cmbFechaDesdeModel.getElementAt(0);
-				if (x0!=null && !x0.trim().equals("")) {
-					cmbFechaDesdeModel.insertElementAt("", 0);
+				if (x0!=null && !x0.trim().equals(StringVacio)) {
+					cmbFechaDesdeModel.insertElementAt(StringVacio, 0);
 				}
 			} catch (Exception r) {
-				comboUtil.savePreference("", comboNameFecha);
+				comboUtil.savePreference(StringVacio, comboNameFecha);
 			}
 		}
 		return cmbFechaDesdeModel;
@@ -1712,24 +1745,24 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	
 	protected Date getFecha() throws Exception {
 		String fechaValue=comboUtil.getComboValue(getCmbFechaDesde(), getCmbFechaDesdeModel(), comboNameFecha);
-		if (fechaValue==null || fechaValue.trim().equals("")) {
+		if (fechaValue==null || fechaValue.trim().equals(StringVacio)) {
 			return null;
 		}
 		Date date = null;
 		SimpleDateFormat sdf=null;
 		try {
-			sdf=new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+			sdf=new SimpleDateFormat(DATEFORMAT_yyyyMMdd_HHmmss);
 			date=sdf.parse(fechaValue);
 		} catch (ParseException e) {
 			try {
-				sdf=new SimpleDateFormat("yyyy/MM/dd HH:mm");
+				sdf=new SimpleDateFormat(DATEFORMAT_yyyyMMdd_HHmm);
 				date=sdf.parse(fechaValue);
 			} catch (ParseException e1) {
 				try {
-					sdf=new SimpleDateFormat("yyyy/MM/dd");
+					sdf=new SimpleDateFormat(DATEFORMAT_yyyyMMdd);
 					date=sdf.parse(fechaValue);
 				} catch (Exception e2) {	
-					throw new Exception("ERROR "+fechaValue+" is not  yyyy/MM/dd HH:mm:ss   or   yyyy/MM/dd HH:mm  "+e);
+					throw new Exception("ERROR "+fechaValue+" is not  "+DATEFORMAT_yyyyMMdd_HHmmss+"   or   "+DATEFORMAT_yyyyMMdd_HHmm+"  "+e); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
 				}
 			}
 		}
@@ -1774,14 +1807,14 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	}
 	private JButton getBtnCompareVsGit() {
 		if (btnCompareVsGit == null) {
-			btnCompareVsGit = new JButton("comp-F-FGD");
+			btnCompareVsGit = new JButton("comp-F-FGD"); //$NON-NLS-1$
 			btnCompareVsGit.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
 					comparaFicheroConVersionEnDirectorioGit();
 				}
 			});
 			btnCompareVsGit.setMargin(new Insets(1, 1, 2, 1));
-			btnCompareVsGit.setFont(new Font("Tahoma", Font.BOLD, 11));
+			btnCompareVsGit.setFont(new Font("Tahoma", Font.BOLD, 11)); //$NON-NLS-1$
 			btnCompareVsGit.setToolTipText("compara  el Fichero  con  el Fichero en Directorio Git");
 		}
 		return btnCompareVsGit;
@@ -1809,7 +1842,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 		try {
 			Runtime.getRuntime().exec(command);
 		} catch (IOException e) {
-			showMessage("ERROR executing compare command "+compareCommand+" :: "+e);
+			showMessage("ERROR executing compare command "+compareCommand+" :: "+e); //$NON-NLS-2$
 		}
 	}
 
@@ -1823,7 +1856,7 @@ Opens a Text Merge view with the specified files in the left, right, center, and
 		try {
 			Runtime.getRuntime().exec(command);
 		} catch (IOException e) {
-			showMessage("ERROR executing compare command "+compareCommand+" :: "+e);
+			showMessage("ERROR executing compare command "+compareCommand+" :: "+e); //$NON-NLS-2$
 		}
 	}	
 	
@@ -1837,7 +1870,7 @@ Opens a Text Merge view with the specified files in the left, right, center, and
 	                File leftFile=fileVsGit.getFich();
 	                File centerFile=fileVsGit.getBaseVersion().getTempFile();
 	                
-	                File tempFile=new File(fileVsGit.getGitRepo().getTempDir().getPath()+"/"+fileVsGit.getFich().getName()+"-"+System.currentTimeMillis());
+	                File tempFile=new File(fileVsGit.getGitRepo().getTempDir().getPath()+"/"+fileVsGit.getFich().getName()+"-"+System.currentTimeMillis()); //$NON-NLS-1$ //$NON-NLS-2$
 	                try {
 						FileUtils.copyFile(new File(fileVsGit.getFileInGit()), tempFile);
 		                File rigthFile=tempFile; //new File(fileVsGit.getFileInGit()); //fileVsGit.getVersiones().get(0).getTempFile();
@@ -1845,8 +1878,7 @@ Opens a Text Merge view with the specified files in the left, right, center, and
 		                comparado=true;
 		                compare4(leftFile,rigthFile,centerFile,outputFile);
 					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
+						showMessage("Error al abrir la comparacion a 3");
 					}
                 } else {
                 	showMessage("No tiene version base");
@@ -1863,7 +1895,7 @@ Opens a Text Merge view with the specified files in the left, right, center, and
 			try {
 				Desktop.getDesktop().open(f.getParentFile());
 			} catch (Exception e) {
-				showMessage("ERROR "+e);
+				showMessage("ERROR "+e); //$NON-NLS-1$
 			}
 	}
 	
@@ -1905,12 +1937,13 @@ Opens a Text Merge view with the specified files in the left, right, center, and
                 File origen=fileVsGit.getFich();
                 File destino=new File(fileVsGit.getFileInGit());
                 try { 
-                	if (origen.getName().endsWith("-del")) {
+                	if (origen.getName().endsWith(SUFIX_DEL)) {
                 		FileUtils.forceDelete(destino);
                 	} else {
                 		FileUtils.copyFile(origen, destino);
                 	}
                 	getChckbxDone().setSelected(true);
+                	refreshFileStatus();
                 	hecho();
                 } catch (Exception r) {
                 	showMessage("ERROR copiando fichero: "+r);
@@ -1959,13 +1992,6 @@ Opens a Text Merge view with the specified files in the left, right, center, and
         	showMessage("Nada que comparar");
         }
 	}
-	
-	private JLabel getLblNewLabel() {
-		if (lblNewLabel == null) {
-			lblNewLabel = new JLabel(" ");
-		}
-		return lblNewLabel;
-	}
 	private JLabel getLblAuxDir() {
 		if (lblAuxDir == null) {
 			lblAuxDir = new JLabel("tempDir:");
@@ -1982,21 +2008,22 @@ Opens a Text Merge view with the specified files in the left, right, center, and
 	}
 	private JButton getBtnComparebase() {
 		if (btnComparebase == null) {
-			btnComparebase = new JButton("comp3-F-VBG-FGD->FGD");
+			btnComparebase = new JButton("comp3-F-VBG-FGD->FGD"); //$NON-NLS-1$
 			btnComparebase.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
 					compararFicheroConVersionEnDirGitTeniendoEnCuentaLaVersionBase();
 				}
 			});
 			btnComparebase.setMargin(new Insets(1, 1, 2, 1));
-			btnComparebase.setFont(new Font("Tahoma", Font.BOLD, 11));
+			btnComparebase.setFont(new Font("Tahoma", Font.BOLD, 11)); //$NON-NLS-1$
 			btnComparebase.setToolTipText("compara  el Fichero  con  el Fichero en Directorio Git  teniendo en cuenta  la Version Base en Git");
 		}
 		return btnComparebase;
 	}
 	private JCheckBox getChck2versions() {
 		if (chck2versions == null) {
-			chck2versions = new JCheckBox("");
+			chck2versions = new JCheckBox(StringVacio);
+			chck2versions.setToolTipText("enable 2vers (compare between 2 git versions) - habilita 2vers");
 			chck2versions.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
 					habilitar2versiones();
@@ -2017,7 +2044,7 @@ Opens a Text Merge view with the specified files in the left, right, center, and
 
 	private JButton getBtn2Versiones() {
 		if (btn2Versiones == null) {
-			btn2Versiones = new JButton("2vers");
+			btn2Versiones = new JButton("2vers"); //$NON-NLS-1$
 			btn2Versiones.setEnabled(false);
 			btn2Versiones.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
@@ -2025,7 +2052,7 @@ Opens a Text Merge view with the specified files in the left, right, center, and
 				}
 			});
 			btn2Versiones.setMargin(new Insets(1, 1, 2, 1));
-			btn2Versiones.setFont(new Font("Tahoma", Font.PLAIN, 10));
+			btn2Versiones.setFont(new Font("Tahoma", Font.PLAIN, 10)); //$NON-NLS-1$
 			btn2Versiones.setToolTipText("comparar 2 versiones de git");
 		}
 		return btn2Versiones;
@@ -2034,13 +2061,13 @@ Opens a Text Merge view with the specified files in the left, right, center, and
 
 	private JButton getBtnCopy() {
 		if (btnCopy == null) {
-			btnCopy = new JButton("copy-F->FGD");
+			btnCopy = new JButton("copy-F->FGD"); //$NON-NLS-1$
 			btnCopy.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
 					copyFicheroADirectoriGit();
 				}
 			});
-			btnCopy.setFont(new Font("Tahoma", Font.BOLD, 11));
+			btnCopy.setFont(new Font("Tahoma", Font.BOLD, 11)); //$NON-NLS-1$
 			btnCopy.setMargin(new Insets(1, 1, 2, 1));
 			btnCopy.setToolTipText("copiar (o borrar (si nombre es *-del))  el Fichero  sobre  el Fichero en Directorio Git");
 		}
@@ -2050,9 +2077,9 @@ Opens a Text Merge view with the specified files in the left, right, center, and
 
 	private JButton getBotonOpcionCompare() {
 		if (botonOpcionCompare == null) {
-			botonOpcionCompare = new JButton("?");
+			botonOpcionCompare = new JButton("?"); //$NON-NLS-1$
 			botonOpcionCompare.setToolTipText("settings / ajustes de comparacion");
-			botonOpcionCompare.setFont(new Font("Tahoma", Font.PLAIN, 9));
+			botonOpcionCompare.setFont(new Font("Tahoma", Font.PLAIN, 9)); //$NON-NLS-1$
 			botonOpcionCompare.setMargin(new Insets(1, 1, 2, 1));
 			botonOpcionCompare.setBounds(65, 80, 15, 15);
 			botonOpcionCompare.addActionListener(new ActionListener() {
@@ -2076,7 +2103,8 @@ Opens a Text Merge view with the specified files in the left, right, center, and
 	}
 	private JCheckBox getChckbxDone() {
 		if (chckbxDone == null) {
-			chckbxDone = new JCheckBox("done)  Fich:");
+			chckbxDone = new JCheckBox("done)  Fich:"); //$NON-NLS-1$
+			chckbxDone.setToolTipText("Marca el fichero seleccionado como Realizado");
 			chckbxDone.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
 					hecho();
@@ -2136,14 +2164,14 @@ Opens a Text Merge view with the specified files in the left, right, center, and
 	
 	private JButton getBtnCompG() {
 		if (btnCompG == null) {
-			btnCompG = new JButton("comp-VG-FGD");
+			btnCompG = new JButton("comp-VG-FGD"); //$NON-NLS-1$
 			btnCompG.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
 					ComparaUltimaVersionGitConVersionDirectorioGit();
 				}
 			});
 			btnCompG.setMargin(new Insets(1, 1, 2, 1));
-			btnCompG.setFont(new Font("Tahoma", Font.BOLD, 11));
+			btnCompG.setFont(new Font("Tahoma", Font.BOLD, 11)); //$NON-NLS-1$
 			btnCompG.setToolTipText("compara  la ultima Version en Git  con  la Fichero en Directorio Git");
 		}
 		return btnCompG;
@@ -2166,15 +2194,15 @@ Opens a Text Merge view with the specified files in the left, right, center, and
 
 	private JButton getBtnExplorerFich() {
 		if (btnExplorerFich == null) {
-			btnExplorerFich = new JButton("expF");
-			btnExplorerFich.setToolTipText("explorer en carpeta del fichero");
+			btnExplorerFich = new JButton("expF"); //$NON-NLS-1$
+			btnExplorerFich.setToolTipText("explorer en carpeta del Fichero");
 			btnExplorerFich.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
 					explorerFichero();
 				}
 			});
 			btnExplorerFich.setMargin(new Insets(1, 1, 2, 1));
-			btnExplorerFich.setFont(new Font("Tahoma", Font.PLAIN, 10));
+			btnExplorerFich.setFont(new Font("Tahoma", Font.PLAIN, 10)); //$NON-NLS-1$
 		}
 		return btnExplorerFich;
 	}
@@ -2182,15 +2210,15 @@ Opens a Text Merge view with the specified files in the left, right, center, and
 
 	private JButton getBtnExplorerTemp() {
 		if (btnExplorerTemp == null) {
-			btnExplorerTemp = new JButton("expT");
-			btnExplorerTemp.setToolTipText("explorer en carpeta temporal");
+			btnExplorerTemp = new JButton("expT"); //$NON-NLS-1$
+			btnExplorerTemp.setToolTipText("explorer en carpeta Temporal");
 			btnExplorerTemp.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
 					explorerTemporal();
 				}
 			});
 			btnExplorerTemp.setMargin(new Insets(1, 1, 2, 1));
-			btnExplorerTemp.setFont(new Font("Tahoma", Font.PLAIN, 10));
+			btnExplorerTemp.setFont(new Font("Tahoma", Font.PLAIN, 10)); //$NON-NLS-1$
 		}
 		return btnExplorerTemp;
 	}
@@ -2198,15 +2226,15 @@ Opens a Text Merge view with the specified files in the left, right, center, and
 
 	private JButton getBtnExplorerFGD() {
 		if (btnExplorerFGD == null) {
-			btnExplorerFGD = new JButton("expFGD");
-			btnExplorerFGD.setToolTipText("explorer en carpeta del fichero en el directorio git");
+			btnExplorerFGD = new JButton("expFGD"); //$NON-NLS-1$
+			btnExplorerFGD.setToolTipText("explorer en carpeta del Fichero en el Directorio Git");
 			btnExplorerFGD.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
 					explorerFicheroGit();
 				}
 			});
 			btnExplorerFGD.setMargin(new Insets(1, 1, 2, 1));
-			btnExplorerFGD.setFont(new Font("Tahoma", Font.PLAIN, 10));
+			btnExplorerFGD.setFont(new Font("Tahoma", Font.PLAIN, 10)); //$NON-NLS-1$
 		}
 		return btnExplorerFGD;
 	}
@@ -2242,21 +2270,105 @@ Opens a Text Merge view with the specified files in the left, right, center, and
 	}
 	private JLabel getLblOptionBranch() {
 		if (lblOptionBranch == null) {
-			lblOptionBranch = new JLabel("branch");
+			lblOptionBranch = new JLabel("branch"); //$NON-NLS-1$
 		}
 		return lblOptionBranch;
 	}
 	private JTextField getTextOptionBranch() {
 		if (textOptionBranch == null) {
 			textOptionBranch = new JTextField();
+			textOptionBranch.setToolTipText("comprobar que el repositorio se encuentra en este branch");
 			textOptionBranch.setColumns(10);
 		}
 		return textOptionBranch;
 	}
 	private JLabel getLblNewLabel_1() {
 		if (lblNewLabel_1 == null) {
-			lblNewLabel_1 = new JLabel("-");
+			lblNewLabel_1 = new JLabel("-"); //$NON-NLS-1$
 		}
 		return lblNewLabel_1;
+	}
+	private JPanel getPanelOpcionesArbol() {
+		if (panelOpcionesArbol == null) {
+			panelOpcionesArbol = new JPanel();
+			panelOpcionesArbol.setLayout(new BorderLayout(0, 0));
+			panelOpcionesArbol.add(getPanelBotoneraArbol());
+		}
+		return panelOpcionesArbol;
+	}
+	private JPanel getPanelBotoneraArbol() {
+		if (panelBotoneraArbol == null) {
+			panelBotoneraArbol = new JPanel();
+			panelBotoneraArbol.setLayout(new FlowLayout(FlowLayout.LEADING, 2, 0));
+			panelBotoneraArbol.add(getFileStatus());
+			panelBotoneraArbol.add(getAllFilesStatus());
+		}
+		return panelBotoneraArbol;
+	}
+	private JButton getFileStatus() {
+		if (fileStatus == null) {
+			fileStatus = new JButton("fileStatus");
+			fileStatus.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent e) {
+					refreshFileStatus();
+				}
+			});
+			fileStatus.setMargin(new Insets(1, 1, 2, 1));
+			fileStatus.setFont(new Font("Tahoma", Font.BOLD, 11)); //$NON-NLS-1$
+			fileStatus.setToolTipText("recarga el estado de comparacion del fichero");
+		}
+		return fileStatus;
+	}
+	protected void refreshFileStatus() {
+        if (selectedNode!=null) {
+            Object userObject=selectedNode.getUserObject();
+            if (userObject!=null && userObject instanceof FileVsGit) {
+                FileVsGit fileVsGit=(FileVsGit)userObject;
+                fileVsGit.evaluaComparacionInfo();
+            }
+        }
+        getPanelListaHistoricos().revalidate();
+        getPanelListaHistoricos().repaint();
+        treeFiles.revalidate();
+        treeFiles.repaint();
+	}
+
+	private JButton getAllFilesStatus() {
+		if (allFilesStatus == null) {
+			allFilesStatus = new JButton("allFilesStatus");
+			allFilesStatus.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent e) {
+					refreshFilesStatus();
+				}
+			});
+			allFilesStatus.setMargin(new Insets(1, 1, 2, 1));
+			allFilesStatus.setFont(new Font("Tahoma", Font.BOLD, 11)); //$NON-NLS-1$
+			allFilesStatus.setToolTipText("recarga el estado de comparacion de todos los ficheros");
+		}
+		return allFilesStatus;
+	}
+
+	protected void refreshFilesStatus() {
+		if (filesGit!=null) {
+			for (FileVsGit fileVsGit:filesGit) {
+				fileVsGit.evaluaComparacionInfo();
+			}
+		}
+        getPanelListaHistoricos().revalidate();
+        getPanelListaHistoricos().repaint();
+        treeFiles.revalidate();
+        treeFiles.repaint();
+        /*
+        DefaultTreeModel model = (DefaultTreeModel)treeFiles.getModel();
+        DefaultMutableTreeNode root = (DefaultMutableTreeNode)model.getRoot();
+        //root.add(new DefaultMutableTreeNode("another_child"));
+        model.reload(root);
+        */
+	}
+	private JPanel getPanelOpcionFecha() {
+		if (panelOpcionFecha == null) {
+			panelOpcionFecha = new JPanel();
+		}
+		return panelOpcionFecha;
 	}
 }
