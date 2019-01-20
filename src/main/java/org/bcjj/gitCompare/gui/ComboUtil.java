@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JComboBox;
@@ -48,23 +49,28 @@ public class ComboUtil {
 			return null;
 		}
 		String value= combo.getSelectedItem().toString();
-		if (combo.getSelectedIndex()==-1) {
-			modelo.insertElementAt(value,0);
-		} else {
-			try {
-				modelo.removeElementAt(combo.getSelectedIndex());
-			} catch (Exception r) {
-				//ignorar
+		modelo.insertElementAt(value,0);
+		ArrayList<String> existentes=new ArrayList<String>();
+		existentes.add(value);
+		int i=0;
+		while (i<modelo.getSize() && i<=maxPreferencesCombo) {
+			i++;
+			String x=modelo.getElementAt(i);
+			if (existentes.contains(x)) {
+				modelo.removeElementAt(i);
+				i--;
+			} else {
+				existentes.add(x);
 			}
-			modelo.insertElementAt(value,0);
-			modelo.setSelectedItem(value);
 		}
 		while (modelo.getSize()>maxPreferencesCombo) {
-			modelo.removeElementAt(modelo.getSize()-1);
+			modelo.removeElementAt(maxPreferencesCombo);
 		}
+		modelo.setSelectedItem(value);
 		savePreference(modelo, fieldType);
 		return value;
 	}
+
 
 	public  void loadPreference(DefaultComboBoxModel<String> modelo, ComboName fieldType) throws IOException {
 		try (BufferedReader br = new BufferedReader(new FileReader(getPreferenceFile(fieldType)))) {

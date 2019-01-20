@@ -216,7 +216,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	private JComboBox<String> CmbProjectFile;
 	private DefaultComboBoxModel<String> cmbProjectFileModel;
 
-	private ComboUtil comboUtil=new ComboUtil("gitCompare", 10); //$NON-NLS-1$
+	private ComboUtil comboUtil=new ComboUtil("gitCompare", 15); //$NON-NLS-1$
 	private ComboName comboNameProject=new ComboName("project"); //$NON-NLS-1$
 	private ComboName comboNameCompareApp=new ComboName("compareApp"); //$NON-NLS-1$
 	private DefaultComboBoxModel<String> cmbFechaDesdeModel;
@@ -1435,7 +1435,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 			CmbProjectFile.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
 					try {
-						if (false) {
+						if (true) {
 							comboProjectFileChanged();
 						}
 					} catch (IOException e1) {
