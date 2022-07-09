@@ -114,4 +114,17 @@ public class GitFileVersionInfo {
 		return tempFile;
 	}
 	
+	
+	public static void main(String [] s) {
+		SimpleDateFormat sdf=new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+		
+		int commitTimeInt=1547856139; 
+		Date fechaInt=new  Date(commitTimeInt*1000);
+		
+		long commitTimeLong=1547856139; 
+		Date fechaLong=new  Date(commitTimeLong*1000);
+
+		System.out.println("espero:2019/01/19 01:02:19    MAL:fechaInt:"+sdf.format(fechaInt)+"  BIEN:fechaLong:"+sdf.format(fechaLong));
+	}
+	
 }

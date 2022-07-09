@@ -54,7 +54,7 @@ public class Historico extends JPanel {
 	 */
 	public Historico() {
 		esteHistorico=this;
-		setPreferredSize(new Dimension(300, 134));
+		setPreferredSize(new Dimension(471, 134));
 		setMinimumSize(new Dimension(300, 180));
 		setLayout(new BoxLayout(this, BoxLayout.LINE_AXIS));
 		add(getPanelPrincipal());
@@ -79,9 +79,13 @@ public class Historico extends JPanel {
 		this.gitFileVersionInfo=gitFileVersionInfo;
 		this.contenedorHistorico=contenedorHistorico;
 		if (gitFileVersionInfo.isRealCommitId()) {
+			lblAutor.setText("author of change:");
 			getTxtCommitid().setText(gitFileVersionInfo.getCommitId());
 		} else {
-			getTxtCommitid().setText("*"+gitFileVersionInfo.getCommitId());
+			lblAutor.setText("author of version:");
+			getTxtCommitid().setText("Version Commit Id : "+gitFileVersionInfo.getCommitId());
+			getTxtCommitid().setBackground(Color.GRAY);
+			getTxtAutor().setBackground(Color.GRAY);
 		}
 		getTxtCommitid().setCaretPosition(0);
 		getTxtFecha().setText(gitFileVersionInfo.getFechaYMDHMS());

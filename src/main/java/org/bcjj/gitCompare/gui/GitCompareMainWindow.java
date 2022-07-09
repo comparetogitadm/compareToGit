@@ -21,9 +21,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -32,12 +36,16 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import javax.swing.BoxLayout;
 import javax.swing.ComboBoxModel;
@@ -66,6 +74,7 @@ import javax.swing.tree.TreeSelectionModel;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.SystemUtils;
 import org.bcjj.gitCompare.NuevasVersionesInfo;
 import org.bcjj.gitCompare.EstadoProcesado;
 import org.bcjj.gitCompare.FileInTreeInfo;
@@ -74,6 +83,7 @@ import org.bcjj.gitCompare.GitFileVersionInfo;
 import org.bcjj.gitCompare.GitRepo;
 import org.bcjj.gitCompare.gui.ComboUtil.ComboName;
 import org.bcjj.gitCompare.gui.MapeoDlg.MapeoInfo;
+
 
 import net.iharder.dnd.FileDrop;
 import java.awt.Font;
@@ -281,6 +291,8 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 
 	private List<FileVsGit> filesGit=null;
 	private JPanel panelOpcionFecha;
+	private JButton listFiles;
+	private JButton zipFiles;
 	
 	/**
 	 * Launch the application.
@@ -655,7 +667,6 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 		String baseDirAbsolute = getDirectoryName(dirFiles);
 		String tempDirectoy=getDirectoryName(tempDir);
 		filesGit=new ArrayList<FileVsGit>();
-		
 		leeDirectorio(dirFiles,rootNode,filesGit,baseDirAbsolute,gitRepo,fechaDesde,tempDirectoy);
 		getFilesTreeModel().reload();
 		expandAll(getTreeFiles());
@@ -720,6 +731,11 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 					
 					FileVsGit fileVsGit=new FileVsGit(fich,gitRepo,fileAbsMapeado,borrar,tempDirectoy);
 					filesGit.add(fileVsGit);
+					if (filesGit.size()==40) {
+						int input = JOptionPane.showConfirmDialog(frmGitcompare, 
+				                "There is more than 40 files. Are you sure to continue, or is the 'from Date' wrong? Continue?", "Lots of files, Continue?", 
+				                JOptionPane.OK_CANCEL_OPTION, JOptionPane.INFORMATION_MESSAGE);						
+					}
 					if (fileAbsMapeado.contains("codigo.java")) {
 						System.out.println(fileAbsMapeado);
 					}
@@ -968,8 +984,16 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 			openProject();
 		}
 	}
+	
 	public static void showMessage(String message) {
-		JOptionPane.showMessageDialog(null, message,"CompareToGit",JOptionPane.OK_OPTION);
+		showMessage(message, false);
+	}
+	public static void showMessage(String message,boolean info) {
+		int opc=JOptionPane.OK_OPTION;
+		if (info) {
+			opc=JOptionPane.PLAIN_MESSAGE;
+		}
+		JOptionPane.showMessageDialog(null, message,"CompareToGit",opc);
 	}
 	
 	
@@ -1893,12 +1917,38 @@ Opens a Text Merge view with the specified files in the left, right, center, and
 	
 	protected void openInExplorer(File f) {
 			try {
-				Desktop.getDesktop().open(f.getParentFile());
+				File file=getMaxFileExist(f);
+				System.out.println("open: "+f+"  --> "+file);
+				if (SystemUtils.IS_OS_WINDOWS && file.isFile()) {
+					String path = file.getCanonicalPath();
+					ProcessBuilder pb = new ProcessBuilder("explorer.exe", "/select," + path + ",focus");
+					pb.redirectError();
+					Process proc = pb.start();	
+				} else if (Desktop.isDesktopSupported()) {
+				    Desktop desktop = Desktop.getDesktop();
+				    //desktop.browse(f.toURI()); 
+				    if (file.isFile()) {
+				    	desktop.open(file.getParentFile());
+				    } else {
+				    	desktop.open(file);
+				    }
+				} else {
+					showMessage("not supported");
+				}
+				
+				
 			} catch (Exception e) {
 				showMessage("ERROR "+e); //$NON-NLS-1$
 			}
 	}
 	
+	private File getMaxFileExist(File file) {
+		if (file.exists()) {
+			return file;
+		}
+		return getMaxFileExist(file.getParentFile());
+	}
+
 	protected void explorerFicheroGit() {
         if (selectedNode!=null) {
             Object userObject=selectedNode.getUserObject();
@@ -2302,6 +2352,8 @@ Opens a Text Merge view with the specified files in the left, right, center, and
 			panelBotoneraArbol.setLayout(new FlowLayout(FlowLayout.LEADING, 2, 0));
 			panelBotoneraArbol.add(getFileStatus());
 			panelBotoneraArbol.add(getAllFilesStatus());
+			panelBotoneraArbol.add(getListFiles());
+			panelBotoneraArbol.add(getZipFiles());
 		}
 		return panelBotoneraArbol;
 	}
@@ -2370,5 +2422,160 @@ Opens a Text Merge view with the specified files in the left, right, center, and
 			panelOpcionFecha = new JPanel();
 		}
 		return panelOpcionFecha;
+	}
+	private JButton getListFiles() {
+		if (listFiles == null) {
+			listFiles = new JButton("listFiles");
+			listFiles.setMargin(new Insets(1, 1, 2, 1));
+			listFiles.setFont(new Font("Tahoma", Font.BOLD, 11)); //$NON-NLS-1$
+			listFiles.setToolTipText("lista los nombres de los ficheros");		
+			listFiles.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent e) {
+					generateList();
+				}
+			});			
+		}
+		return listFiles;
+	}
+	protected void generateList() {
+		//List<FileVsGit> filesGit
+        if (filesGit==null || filesGit.size()==0) {
+			showMessage("no files!");
+			return;
+		}		
+
+        SimpleDateFormat sdf=new SimpleDateFormat("yyyyMMdd_HHmmss");
+		Date now=new Date();
+		
+        String txt=askForString("txt file name", "/temp/export-list-"+sdf.format(now)+".txt");
+        File txtFile=new File(txt);
+        try {
+        	txtFile.getParentFile().mkdirs();
+        } catch (Exception r) {
+        	//ignore
+        }        
+        try (FileWriter fw=new FileWriter(txtFile)) {
+        	String NL="\r\n";
+        	String TAB="\t";
+        	fw.write("***** LOCAL FILES: ****"+NL);
+            for(FileVsGit fileVsGit:filesGit) {
+            	fw.write(fileVsGit.getFich().getCanonicalPath()+NL);
+            }        	
+        	
+            fw.write(NL+NL+NL+NL+NL+NL+NL+NL);
+        	fw.write("***** GIT FILES: ****"+NL);
+            for(FileVsGit fileVsGit:filesGit) {
+            	String nuevo="";
+            	if (!new File(fileVsGit.getFileInGit()).exists()) {
+            		nuevo="NUEVO:  ";
+            	}
+            	fw.write(nuevo+fileVsGit.getFileInGit()+NL);
+            } 
+            
+            
+            fw.write(NL+NL+NL+NL+NL+NL+NL+NL);
+        	fw.write("***** GIT Paths: ****"+NL);
+            for(FileVsGit fileVsGit:filesGit) {
+            	String nuevo="";
+            	if (!new File(fileVsGit.getFileInGit()).exists()) {
+            		nuevo="NUEVO:  ";
+            	}            	
+            	fw.write(nuevo+"getGitFile:"+fileVsGit.getGitFile()+NL);
+            } 
+            
+        	fw.write("***** FILES: ****"+NL);
+            for(FileVsGit fileVsGit:filesGit) {
+            	String nuevo="";
+            	if (!new File(fileVsGit.getFileInGit()).exists()) {
+            		nuevo="NUEVO:";
+            	}          	
+            	fw.write(fileVsGit.getFich().getCanonicalPath()+TAB+nuevo+fileVsGit.getFileInGit()+TAB+nuevo+fileVsGit.getGitFile()+NL);
+            }            
+            
+            showMessage("done! "+txt,true);
+        } catch (IOException e) {
+        	showMessage("ERROR making txt "+txt+" :: "+e);
+		}
+        
+        
+        List<File> listOfFiles = new ArrayList();
+
+
+        
+        
+        
+	}
+
+	private JButton getZipFiles() {
+		if (zipFiles == null) {
+			zipFiles = new JButton("zipFiles");
+			zipFiles.setMargin(new Insets(1, 1, 2, 1));
+			zipFiles.setFont(new Font("Tahoma", Font.BOLD, 11)); //$NON-NLS-1$
+			zipFiles.setToolTipText("genera un zip con los ficheros");	
+			zipFiles.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent e) {
+					generateZipFile();
+				}
+			});			
+		}
+		return zipFiles;
+	}
+
+	public static String askForString(String message,String value) {
+		String reply = JOptionPane.showInputDialog(message,value);
+		return reply;
+	}	
+	
+	protected void generateZipFile() {
+		
+		//List<FileVsGit> filesGit
+        if (filesGit==null || filesGit.size()==0) {
+			showMessage("no files!");
+			return;
+		}		
+
+        List<File> listOfFiles = new ArrayList();
+
+        for(FileVsGit fileVsGit:filesGit) {
+        	listOfFiles.add(fileVsGit.getFich());
+        	if (new File(fileVsGit.getFileInGit()).exists()) {
+        		listOfFiles.add(new File(fileVsGit.getFileInGit()));
+        	}
+        }
+        
+        
+        SimpleDateFormat sdf=new SimpleDateFormat("yyyyMMdd_HHmmss");
+		Date now=new Date();
+		
+        String zip=askForString("zip file name", "/temp/export-"+sdf.format(now)+".zip");
+        File zipFile=new File(zip);
+        try {
+        	zipFile.getParentFile().mkdirs();
+        } catch (Exception r) {
+        	//ignore
+        }
+        try {
+            ZipOutputStream outputStream = new ZipOutputStream(new FileOutputStream(zipFile));
+            for (File file:listOfFiles) {
+            	File parent=file;
+            	while (parent.getParentFile()!=null) {
+            		parent=parent.getParentFile();
+            	}
+            	Path sourceDir = Paths.get(parent.getPath());
+            	Path sourceFile=Paths.get(file.getPath());
+                Path targetFile = sourceDir.relativize(sourceFile);
+                ZipEntry zipEntry=new ZipEntry(targetFile.toString());
+                zipEntry.setTime(file.lastModified());
+                outputStream.putNextEntry(zipEntry);
+                byte[] bytes = Files.readAllBytes(sourceFile);
+                outputStream.write(bytes, 0, bytes.length);
+                outputStream.closeEntry();
+            };
+            outputStream.close();
+            showMessage("done: "+zip,true);
+        } catch (Exception e) {
+        	showMessage("ERROR making zip "+zip+" :: "+e);
+        }
+		
 	}
 }
