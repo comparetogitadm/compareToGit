@@ -135,6 +135,8 @@ comp3: BCompare.exe ultimaVersionEnGit fichEnDirectorioFiles versionBaseEnGit fi
  */
 
 public class GitCompareMainWindow implements ContenedorHistorico {
+	
+	private final int MAX_FILES_WARNING=40;
 
 	private final static String SUFIX_DEL="-del"; //$NON-NLS-1$
 	private final static String TEMP_DIR_GITCOMPARE="/temp/gitCompare-"; //$NON-NLS-1$
@@ -731,10 +733,13 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 					
 					FileVsGit fileVsGit=new FileVsGit(fich,gitRepo,fileAbsMapeado,borrar,tempDirectoy);
 					filesGit.add(fileVsGit);
-					if (filesGit.size()==40) {
+					if (filesGit.size()==MAX_FILES_WARNING) {
 						int input = JOptionPane.showConfirmDialog(frmGitcompare, 
-				                "There is more than 40 files. Are you sure to continue, or is the 'from Date' wrong? Continue?", "Lots of files, Continue?", 
-				                JOptionPane.OK_CANCEL_OPTION, JOptionPane.INFORMATION_MESSAGE);						
+				                "There is more than "+MAX_FILES_WARNING+" files. Are you sure to continue, or is the 'from Date' wrong? Continue?", "Lots of files, Continue?", 
+				                JOptionPane.OK_CANCEL_OPTION, JOptionPane.INFORMATION_MESSAGE);		
+						if (input==JOptionPane.CANCEL_OPTION) {
+							throw new Exception("cancelado por usuario");
+						}
 					}
 					if (fileAbsMapeado.contains("codigo.java")) {
 						System.out.println(fileAbsMapeado);
@@ -991,7 +996,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	public static void showMessage(String message,boolean info) {
 		int opc=JOptionPane.OK_OPTION;
 		if (info) {
-			opc=JOptionPane.PLAIN_MESSAGE;
+			opc=JOptionPane.INFORMATION_MESSAGE;
 		}
 		JOptionPane.showMessageDialog(null, message,"CompareToGit",opc);
 	}
