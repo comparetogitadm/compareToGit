@@ -65,6 +65,11 @@ public class FileVsGit extends FileInTreeInfo {
 		return fich.getName()+" ("+getVersionesConCambios()+") ";
 	}
 	
+	public String getPathNameSinVersionesConCambios() {
+		return fich.getName();
+	}	
+	
+	
 	public int getVersionesConCambios() {
 		int v=versiones.size();
 		if (tieneBase) {

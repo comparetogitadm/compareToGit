@@ -157,7 +157,7 @@ public class GitRepo {
             RevCommit commit = revWalk.parseCommit(commitIdObjId);
             // and using commit's tree find the path
             RevTree tree = commit.getTree();
-            System.out.println("Having tree: " + tree);
+            //System.out.println("Having tree: " + tree);
 
             // now try to find a specific file
             try (TreeWalk treeWalk = new TreeWalk(repository)) {

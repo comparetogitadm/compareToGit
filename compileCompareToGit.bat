@@ -1,7 +1,7 @@
 rem # create project:
 rem # mvn archetype:generate -DgroupId=org.bcjj.gitCompare -DartifactId=compareToGit -DarchetypeArtifactId=maven-archetype-quickstart -DinteractiveMode=false
 
-set JAVA_HOME=C:\jdk1.8.0_144
+set JAVA_HOME=C:\java\jdk1.8.0_144
 
 mvn clean install dependency:copy-dependencies dependency:sources
 

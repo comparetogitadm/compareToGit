@@ -2,9 +2,12 @@ package org.bcjj.gitCompare;
 
 public class ComparacionInfo {
 //comp3-F-V(B)G-FGD->FGD
-	EstadoComparacion F_FGD; //   Fichero  vs  Fichero Directorio Git
-	EstadoComparacion VG_FGD; //  (ultima) Version Git   vs   Fichero Directorio Git
-	EstadoComparacion F_VG; //    Fichero   vs   (ultima) Version Git  --  hace falta?
+	EstadoComparacion F_FGD; //   F_FGD : Fichero  vs  Fichero Directorio Git
+	EstadoComparacion VG_FGD; //  VG_FGD : (ultima) Version Git (tmp)   vs   Fichero Directorio Git
+	EstadoComparacion F_VG; //    F_VG : Fichero   vs   (ultima) Version Git (tmp) --  hace falta?
+	
+	// F_FGD : Fichero vs Fichero Directorio Git -- VG_FGD : (ultima) Version Git (tmp) vs Fichero Directorio Git -- F_VG : Fichero vs (ultima) Version Git (tmp)
+	
 	
 	public EstadoComparacion getF_FGD() {
 		return F_FGD;
