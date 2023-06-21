@@ -88,7 +88,10 @@ public class FileTreeCellRenderer implements TreeCellRenderer /*, TreeCellEditor
 				FileVsGit fileVsGit=(FileVsGit)userObject;
 				ComparacionInfo comparacionInfo=fileVsGit.getComparacionInfo();
 				nombreFicheroLabel.setForeground(Color.BLACK);
-				
+				if (fileVsGit.getMapNumber()==2) {
+					separa1Label.setText("  (map#2) ");
+					separa1Label.setForeground(Color.BLUE);
+				}
 				String n=fileInTreeInfo.getPathName();
 				if (n.indexOf(".")>-1) {
 					String ext=n.substring(n.indexOf("."));

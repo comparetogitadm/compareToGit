@@ -18,6 +18,10 @@ public class Iconos {
 	static ImageIcon iconoCopy;
 	static ImageIcon iconoCompare;
 	
+	static ImageIcon iconoFolder;
+	static ImageIcon iconoFolderGit;
+	
+	
 	static ImageIcon iconoSinConflictosMini;
 	static ImageIcon iconoConflictosMismoUsuarioMini;
 	static ImageIcon iconoConflictosDistintoUsuarioMini;
@@ -33,6 +37,10 @@ public class Iconos {
 		iconoHecho = createImageIcon("/images/dialog-ok-4.png"); //$NON-NLS-1$
 		//static ImageIcon iconoIgual;
 		//static ImageIcon iconoDistinto;
+		
+		iconoFolder = createImageIcon("/images/carpeta.png"); //$NON-NLS-1$
+		iconoFolderGit = createImageIcon("/images/tortoise.png"); //$NON-NLS-1$
+		
 		
 		iconoPreCopy = createImageIcon("/images/page-white_go.png"); //$NON-NLS-1$
 		iconoCopy = createImageIcon("/images/go-next.png"); //$NON-NLS-1$

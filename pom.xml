@@ -6,7 +6,7 @@
   <groupId>org.bcjj.gitCompare</groupId>
   <artifactId>compareToGit</artifactId>
   <packaging>jar</packaging>
-  <version>0.5</version>
+  <version>0.6</version>
   <name>compareToGit</name>
   <url>http://maven.apache.org</url>
 

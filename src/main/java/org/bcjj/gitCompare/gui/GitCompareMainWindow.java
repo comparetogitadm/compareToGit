@@ -291,6 +291,8 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 	private JPanel panelOpcionFecha;
 	private JButton listFiles;
 	private JButton zipFiles;
+	private JSplitPane splitPane;
+	private JTextField txtFileGitSelected;
 	
 	/**
 	 * Launch the application.
@@ -703,11 +705,11 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 					fileAbs=fileAbs.substring(0, fileAbs.length()-SUFIX_DEL.length());
 					borrar=true;
 				}
-				String fileAbsMapeado=mapearReglas(fileAbs);  //  src/web/web-prod/srv/main.jsp
-				if (fileAbsMapeado!="!") { //$NON-NLS-1$
+				SalidaRegla fileAbsMapeadoRegla=mapearReglas(fileAbs,gitRepo);  //  src/web/web-prod/srv/main.jsp
+				if (!fileAbsMapeadoRegla.candidato.equals("!")) { //$NON-NLS-1$
 
 					
-					FileVsGit fileVsGit=new FileVsGit(fich,gitRepo,fileAbsMapeado,borrar,tempDirectoy);
+					FileVsGit fileVsGit=new FileVsGit(fich,gitRepo,fileAbsMapeadoRegla.candidato,fileAbsMapeadoRegla.parte,borrar,tempDirectoy);
 					filesGit.add(fileVsGit);
 					if (filesGit.size()==MAX_FILES_WARNING) {
 						int input = JOptionPane.showConfirmDialog(frmGitcompare, 
@@ -717,8 +719,8 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 							throw new Exception("cancelado por usuario");
 						}
 					}
-					if (fileAbsMapeado.contains("codigo.java")) {
-						System.out.println(fileAbsMapeado);
+					if (fileAbsMapeadoRegla.candidato.contains("codigo.java")) {
+						System.out.println(fileAbsMapeadoRegla.candidato);
 					}
 					//fileVsGit.initialize(); //.check()
 					List<GitFileVersionInfo> versiones=fileVsGit.getVersiones();
@@ -791,25 +793,52 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 		return exp;
 	}
 	
-	private String mapearReglas(String fileAbs) { //como baseDirAbsolute termina forzosamente por /, fileAbs no comenzará por /
+	
+	private static class SalidaRegla {
+		String candidato;
+		int parte=1;
+		public SalidaRegla(String candidato, int parte) {
+			super();
+			this.candidato = candidato;
+			this.parte = parte;
+		}
+	}
+	
+	private SalidaRegla mapearReglas(String fileAbs,GitRepo gitRepo) { //como baseDirAbsolute termina forzosamente por /, fileAbs no comenzará por /
 		fileAbs=StringUtils.replace(fileAbs, "\\", "/"); //$NON-NLS-1$ //$NON-NLS-2$
 		if (confMapeoReglasMapeo==null) {
-			return fileAbs;
+			return new SalidaRegla(fileAbs,-1);
 		}
 		for (String s:confMapeoReglasMapeo) {
 			StringTokenizer st=new StringTokenizer(s,"|"); //$NON-NLS-1$
 			String buscar=trimPathSymbol(st.nextToken())+"/"; //$NON-NLS-1$
-			String mapear=trimPathSymbol(st.nextToken())+"/"; //$NON-NLS-1$
+			String mapearExp=trimPathSymbol(st.nextToken())+"/"; //$NON-NLS-1$
+			
+			
+			//path.1=srv-war/WEB-INF/config|src/web/web-prod/properties:src/web/web-prim/properties
+			//path.4=srv-war|src/web/web-prod/srv:src/web/web-prim/srv
+			//Si existe en opcion 2 usa la 2, si no 1. (ponerlo como ayuda en MapeoDlg y en genSample y en directorio test)
+			//Mostrar en gui la ruta elegida y un icono de aviso
+			
 			if (fileAbs.startsWith(buscar)) {
-				if (mapear.equals("!/")) { //$NON-NLS-1$
-					return "!"; //$NON-NLS-1$
+				if (mapearExp.equals("!/")) { //$NON-NLS-1$
+					return new SalidaRegla("!",0); //$NON-NLS-1$
 				}
-				String mapeado=fileAbs.substring(buscar.length());
-				mapeado=mapear+mapeado;
-				return mapeado;
+				String parteFinalFich=fileAbs.substring(buscar.length());
+				//List<String> mapeos = new ArrayList<>(Arrays.asList(mapearExp.split("#")));
+				String [] mapeos=mapearExp.split("#");
+				if (mapeos.length>1) {
+					String mapeado2=mapeos[1]+parteFinalFich;
+					File f2=new File(gitRepo.getPath()+"/"+mapeado2);     
+					if (f2.exists()) {
+						return new SalidaRegla(mapeado2,2); 
+					}
+				}
+				String mapeado=mapeos[0]+parteFinalFich;
+				return new SalidaRegla(mapeado,1);
 			}
 		}
-		return fileAbs;
+		return new SalidaRegla(fileAbs,-1);
 	}
 
 	private void actualizaConflictoEnNodosPadres(DefaultMutableTreeNode padreNode, NuevasVersionesInfo diferencia) {
@@ -858,6 +887,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 		                if (userObject!=null && userObject instanceof FileVsGit) {
 			                FileVsGit fileVsGit=(FileVsGit)userObject;
 			                getTxtFileSelected().setText(fileVsGit.getGitFile());
+			                //getTxtFileGitSelected().setText(fileVsGit.getFileInGit() );
 			                
 			                if (fileVsGit.getEstadoProcesado()==EstadoProcesado.Revisado) {
 			                	getChckbxDone().setSelected(true);
@@ -946,6 +976,23 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 				      }
 				    });
 
+		    JMenuItem itemExpF=new JMenuItem("expF (abrir en explorer Fichero (trabajo))", Iconos.iconoFolder );
+		    popup.add(itemExpF);
+		    itemExpF.setHorizontalTextPosition(JMenuItem.RIGHT);
+		    itemExpF.addActionListener(new ActionListener() {
+			      public void actionPerformed(ActionEvent event) {
+			    	  explorerFichero();
+				      }
+				    });
+		    
+		    JMenuItem itemExpFGD=new JMenuItem("expFGD (abrir en explorer Fichero Directorio Git)", Iconos.iconoFolderGit );
+		    popup.add(itemExpFGD);
+		    itemExpFGD.setHorizontalTextPosition(JMenuItem.RIGHT);
+		    itemExpFGD.addActionListener(new ActionListener() {
+			      public void actionPerformed(ActionEvent event) {
+			    	  explorerFicheroGit();
+				      }
+				    });
 		    return popup;
 	  }	
 	
@@ -1281,6 +1328,7 @@ public class GitCompareMainWindow implements ContenedorHistorico {
 			panelSelected.setMinimumSize(new Dimension(20, 20));
 			panelSelected.setLayout(new BorderLayout(0, 0));
 			panelSelected.add(getChckbxDone(), BorderLayout.WEST);
+			//panelSelected.add(getSplitPane(), BorderLayout.CENTER);
 			panelSelected.add(getTxtFileSelected(), BorderLayout.CENTER);
 			panelSelected.add(getPanel(), BorderLayout.EAST);
 		}
@@ -2636,4 +2684,23 @@ Opens a Text Merge view with the specified files in the left, right, center, and
         }
 		
 	}
+	/*
+	private JSplitPane getSplitPane() {
+		if (splitPane == null) {
+			splitPane = new JSplitPane();
+			splitPane.setLeftComponent(getTxtFileSelected());
+			splitPane.setRightComponent(getTxtFileGitSelected());
+			splitPane.setDividerLocation(500);
+		}
+		return splitPane;
+	}
+	private JTextField getTxtFileGitSelected() {
+		if (txtFileGitSelected == null) {
+			txtFileGitSelected = new JTextField();
+			txtFileGitSelected.setEnabled(false);
+			txtFileGitSelected.setColumns(10);
+		}
+		return txtFileGitSelected;
+	}
+	*/
 }

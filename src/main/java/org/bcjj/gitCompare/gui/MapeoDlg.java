@@ -147,7 +147,7 @@ public class MapeoDlg extends JDialog implements ActionListener {
 	private JTextPane getTxtPanelAyuda() {
 		if (txtPanelAyuda==null) {
 			txtPanelAyuda = new JTextPane();
-			txtPanelAyuda.setText("- Una linea por cada mapeo, separando las rutas con | (pipe)\r\n- ruta file | ruta git\r\n- Las rutas ser\u00E1n relativas a los directorios de files o git.\r\n- El orden es importante, la primera ruta file que coincida, determina el mapeo.\r\n- Si no coinicide ninguna se supone que va de file directo a git\r\n- Si ruta git es ! entonces es que no se debe tener en cuenta (ejemplo: deployment/srv-war/WEB-INF/class|!)");
+			txtPanelAyuda.setText("- Una linea por cada mapeo, separando las rutas con | (pipe)\r\n- ruta file | ruta git\r\n- Las rutas ser\u00E1n relativas a los directorios de files o git.\r\n- El orden es importante, la primera ruta file que coincida, determina el mapeo.\r\n- Si no coinicide ninguna se supone que va de file directo a git\r\n- Si ruta git es ! entonces es que no se debe tener en cuenta (ejemplo: deployment/srv-war/WEB-INF/class|!)\r\n-se pueden poner 2 rutas en un mapeo (separadas por #), por defecto coge la primera, salvo que exista fichero en la 2, entonces coge la segunda (EJ:  srv-war|src\\\\web\\\\web-prod\\\\srv#src\\\\web\\\\web-ap\\\\srv) ");
 		}
 		return txtPanelAyuda;
 	}
@@ -240,10 +240,10 @@ public class MapeoDlg extends JDialog implements ActionListener {
 			btnGensample.addActionListener(new ActionListener() {
 				public void actionPerformed(ActionEvent e) {
 					getTextReglasMapeo().setText("srv-war\\WEB-INF\\java|src\\java"+NL
-							+"srv-war\\WEB-INF\\config|src\\web\\web-prod\\properties"+NL
+							+"srv-war\\WEB-INF\\config|src\\web\\web-prod\\properties#src\\web\\web-ap\\properties"+NL
 							+"srv-war/WEB-INF/classes|!"+NL
 							+"srv-war/WEB-INF/lib|!"+NL
-							+"srv-war|src\\web\\web-prod\\srv"+NL);
+							+"srv-war|src\\web\\web-prod\\srv#src\\web\\web-ap\\srv"+NL);
 				}
 			});
 		}

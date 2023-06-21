@@ -33,16 +33,24 @@ public class FileVsGit extends FileInTreeInfo {
 	private boolean borrar;
 	private String tempFichBase;
 	private String tempDirectoy;
+	private int mapNumber;
 	
+	public int getMapNumber() {
+		return mapNumber;
+	}
+
+
+
 	ComparacionInfo comparacionInfo=null;
 	
 	
-	public FileVsGit(File fich, GitRepo gitRepo, String gitFile,boolean borrar,String tempDirectoy) {
+	public FileVsGit(File fich, GitRepo gitRepo, String gitFile,int mapNumber, boolean borrar,String tempDirectoy) {
 		super(fich.getName());
 		this.tempDirectoy=tempDirectoy;
 		this.fich = fich;
 		this.gitRepo = gitRepo;
 		this.gitFile = gitFile;
+		this.mapNumber=mapNumber;
 		this.borrar=borrar;
 		this.tempFichBase=tempDirectoy+gitFile;
 		initialize();
@@ -322,7 +330,7 @@ cb8435dc8ba3    Eric Biggers    20220510.113232 ext4: reject the 'commit' option
 		
 		GitRepo gitRepo=new GitRepo("D:/linuxKernel-git/linux",commitIdControl); 
 		
-		FileVsGit fVsGit=new FileVsGit(new File("c:/isTheSame.txt"), gitRepo, "fs/ext4/inode.c",false,"c:/temp/");
+		FileVsGit fVsGit=new FileVsGit(new File("c:/isTheSame.txt"), gitRepo,"fs/ext4/inode.c",1,false,"c:/temp/");
 		fVsGit.getVersiones().forEach(gitFVInfo -> {
 			System.out.println(gitFVInfo.getCommitId()+" f:"+gitFVInfo.getFechaYMDHMS()+" c:"+gitFVInfo.getShortMessage());
 		});
